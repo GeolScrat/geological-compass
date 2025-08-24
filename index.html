@@ -1,1391 +1,223 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geological Compass</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #1a1a1a;
-            color: #f0f0f0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            background-color: #2a2a2a;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            max-width: 500px;
-            width: 100%;
-            text-align: center;
-        }
-
-        .header {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 20px;
-            color: #e0e0e0;
-        }
-
-        .display-box {
-            background-color: #333;
-            border-radius: 10px;
-            width: 100%;
-            height: 150px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            color: #888;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .compass-tilt-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .label {
-            font-weight: 500;
-            color: #ccc;
-        }
-
-        .value-display {
-            background-color: #444;
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 1.2rem;
-            min-width: 120px;
-            text-align: center;
-        }
-
-        .input-group {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 15px;
-        }
-
-        .coordinates-group {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .coordinate-input {
-            background-color: #444;
-            border: none;
-            padding: 10px;
-            border-radius: 8px;
-            text-align: center;
-            width: 80px;
-        }
-        
-        .btn-group {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .btn {
-            background-color: #4a4a4a;
-            color: #f0f0f0;
-            padding: 15px 20px;
-            border-radius: 10px;
-            border: none;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.2s;
-            box-shadow: 0 4px #2a2a2a;
-        }
-
-        .btn:hover {
-            background-color: #5a5a5a;
-            transform: translateY(-2px);
-        }
-
-        .btn:active {
-            transform: translateY(2px);
-            box-shadow: 0 2px #2a2a2a;
-        }
-
-        .start-btn {
-            background-color: #556B2F;
-            color: #fff;
-            box-shadow: 0 4px #3C4B22;
-        }
-        .start-btn:hover {
-            background-color: #6a823d;
-        }
-        .start-btn:active {
-            box-shadow: 0 2px #3C4B22;
-        }
-
-        .message-box {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #4a4a4a;
-            color: #fff;
-            padding: 15px 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.5s ease-in-out;
-            pointer-events: none;
-        }
-
-        .message-box.show {
-            opacity: 1;
-        }
-
-        .page {
-            display: none;
-        }
-
-        .page.active {
-            display: block;
-        }
-
-        .chart-page {
-            max-width: 800px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        th, td {
-            border: 1px solid #444;
-            padding: 12px;
-            text-align: left;
-        }
-
-        th {
-            background-color: #333;
-            color: #f0f0f0;
-            font-weight: 700;
-        }
-
-        td {
-            background-color: #2a2a2a;
-        }
-
-        #compass-visual {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 80%;
-            height: 80%;
-            border: 2px solid #5a5a5a;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: transform 0.1s ease-in-out;
-        }
-
-        .compass-needle {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 100%;
-            height: 100%;
-            transform-origin: 50% 50%;
-            transition: transform 0.1s ease-in-out;
-        }
-
-        .compass-needle::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 40%;
-            border-left: 5px solid transparent;
-            border-right: 5px solid transparent;
-            border-bottom: 20px solid #f00;
-        }
-        
-        .compass-marker {
-            position: absolute;
-            font-size: 0.8rem;
-            color: #f0f0f0;
-            font-weight: 600;
-            transform: translate(-50%, -50%);
-        }
-
-        .compass-marker.n { top: 0%; left: 50%; }
-        .compass-marker.ne { top: 14.6%; left: 85.4%; }
-        .compass-marker.e { top: 50%; left: 100%; }
-        .compass-marker.se { top: 85.4%; left: 85.4%; }
-        .compass-marker.s { top: 100%; left: 50%; }
-        .compass-marker.sw { top: 85.4%; left: 14.6%; }
-        .compass-marker.w { top: 50%; left: 0%; }
-        .compass-marker.nw { top: 14.6%; left: 14.6%; }
-        
-        #tilt-visual {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 80%;
-            height: 80%;
-            border: 2px solid #5a5a5a;
-            border-radius: 10px;
-            transform: translate(-50%, -50%);
-        }
-        
-        #tilt-guide {
-            position: absolute;
-            top: 0;
-            left: 50%;
-            width: 2px;
-            height: 100%;
-            background-color: #f0f0f0;
-            transform: translateX(-50%);
-            transition: background-color 0.2s;
-        }
-
-        .tilt-ball {
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            background-color: #008cff;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: transform 0.1s ease-out;
-        }
-        
-        #compass-display, #tilt-display {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 1.2rem;
-            z-index: 10;
-            color: #e0e0e0;
-            background-color: rgba(42, 42, 42, 0.7);
-            padding: 5px 10px;
-            border-radius: 5px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Geology Measurement App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f7fa;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .input-group {
+      margin-bottom: 20px;
+    }
+    .label {
+      font-weight: bold;
+      margin-bottom: 8px;
+      display: block;
+    }
+    .input, .coordinate-input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 4px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+    }
+    .btn.save-btn { background: #28a745; color: #fff; }
+    .btn.save-btn:hover { background: #218838; }
+    .btn.start-btn { background: #007bff; color: #fff; }
+    .btn.start-btn:hover { background: #0056b3; }
+    .btn.clear-btn { background: #dc3545; color: #fff; }
+    .btn.clear-btn:hover { background: #c82333; }
+    .records {
+      margin-top: 30px;
+    }
+    .record {
+      background: #f8f9fa;
+      border: 1px solid #ddd;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+    }
+    .message {
+      margin: 15px 0;
+      padding: 10px;
+      border-radius: 6px;
+      display: none;
+    }
+    .message.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .message.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .coordinates-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 5px;
+    }
+    .coordinate-input {
+      flex: 1;
+    }
+  </style>
 </head>
 <body>
-    <div id="main-app" class="page active container">
-        <div class="header">Geological Compass</div>
-        <div class="compass-tilt-grid">
-            <div>
-                <div class="display-box">
-                    <div id="compass-visual">
-                        <div class="compass-needle"></div>
-                        <span class="compass-marker n">N</span>
-                        <span class="compass-marker ne">NE</span>
-                        <span class="compass-marker e">E</span>
-                        <span class="compass-marker se">SE</span>
-                        <span class="compass-marker s">S</span>
-                        <span class="compass-marker sw">SW</span>
-                        <span class="compass-marker w">W</span>
-                        <span class="compass-marker nw">NW</span>
-                    </div>
-                    <span id="compass-display">Compass</span>
-                </div>
-                <div class="label">Compass</div>
-            </div>
-            <div>
-                <div class="display-box">
-                    <div id="tilt-visual">
-                        <div id="tilt-guide"></div>
-                        <div id="tilt-ball" class="tilt-ball"></div>
-                    </div>
-                    <span id="tilt-display">Tilt</span>
-                </div>
-                <div class="label">Tilt</div>
-            </div>
-        </div>
-
-        <div class="input-group">
-            <div class="label">Strike</div>
-            <div id="strike-display" class="value-display">---</div>
-            <button id="strike-btn" class="btn start-btn">Start measuring strike</button>
-        </div>
-
-        <div class="input-group">
-            <div class="label">Dip</div>
-            <div id="dip-display" class="value-display">---</div>
-            <button id="dip-btn" class="btn start-btn" disabled>Start measuring dip</button>
-        </div>
-        
-        <!-- NEW DIP DIRECTION MEASUREMENT -->
-        <div class="input-group">
-            <div class="label">Dip Direction</div>
-            <div id="dip-direction-display" class="value-display">---</div>
-            <button id="dip-direction-btn" class="btn start-btn" disabled>Start measuring dip direction</button>
-        </div>
-        
-        <div class="input-group">
-            <div class="label">Coordinates</div>
-            <div class="coordinates-group">
-                <input type="text" id="coord-lat" class="coordinate-input" placeholder="Latitude" value="N">
-                <input type="text" id="coord-lon" class="coordinate-input" placeholder="Longitude" value="E">
-            </div>
-        </div>
-        
-        <div class="btn-group">
-            <button id="restart-btn" class="btn">Re-Start measurements</button>
-            <button id="save-btn" class="btn" disabled>Save Measurements</button>
-            <button id="show-chart-btn" class="btn">Show Chart</button>
-        </div>
+  <div class="container">
+    <h1>Geology Measurement App</h1>
+    
+    <div class="input-group">
+      <label class="label">Strike</label>
+      <input type="number" id="strike" class="input" placeholder="Enter Strike (°)" min="0" max="360">
     </div>
-
-    <div id="chart-page" class="page chart-page container">
-        <div class="header">Saved Measurements</div>
-        <table id="measurements-table">
-            <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Coordinates</th>
-                    <th>Strike</th>
-                    <th>Dip</th>
-                    <!-- NEW DIP DIRECTION COLUMN -->
-                    <th>Dip Direction</th>
-                </tr>
-            </thead>
-            <tbody>
-            </tbody>
-        </table>
-        <div class="btn-group mt-5">
-            <button id="save-pdf-btn" class="btn">Save as PDF</button>
-            <button id="save-jpg-btn" class="btn">Save as JPG</button>
-            <button id="back-to-app-btn" class="btn">Back to App</button>
-        </div>
+    
+    <div class="input-group">
+      <label class="label">Dip</label>
+      <input type="number" id="dip" class="input" placeholder="Enter Dip (°)" min="0" max="90">
     </div>
-
-    <div id="message-box" class="message-box"></div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-    <script>
-        let strikeValue = null;
-        let dipValue = null;
-        let dipDirectionValue = null; // New variable
-        let isMeasuringStrike = false;
-        let isMeasuringDip = false;
-        let isMeasuringDipDirection = false; // New state
-        let measurements = [];
-        let permissionsRequested = false;
-        let latestOrientationData = { alpha: 0, beta: 0, gamma: 0 };
-        let latestMotionData = { beta: 0, gamma: 0 };
-
-        const strikeDisplay = document.getElementById('strike-display');
-        const dipDisplay = document.getElementById('dip-display');
-        const dipDirectionDisplay = document.getElementById('dip-direction-display'); // New element
-        const compassDisplay = document.getElementById('compass-display');
-        const tiltDisplay = document.getElementById('tilt-display');
-        const strikeBtn = document.getElementById('strike-btn');
-        const dipBtn = document.getElementById('dip-btn');
-        const dipDirectionBtn = document.getElementById('dip-direction-btn'); // New button
-        const saveBtn = document.getElementById('save-btn');
-        const restartBtn = document.getElementById('restart-btn');
-        const showChartBtn = document.getElementById('show-chart-btn');
-        const savePdfBtn = document.getElementById('save-pdf-btn');
-        const saveJpgBtn = document.getElementById('save-jpg-btn');
-        const backToAppBtn = document.getElementById('back-to-app-btn');
-        const mainAppPage = document.getElementById('main-app');
-        const chartPage = document.getElementById('chart-page');
-        const measurementsTableBody = document.querySelector('#measurements-table tbody');
-        const coordLatInput = document.getElementById('coord-lat');
-        const coordLonInput = document.getElementById('coord-lon');
-        const compassNeedle = document.querySelector('.compass-needle');
-        const tiltBall = document.getElementById('tilt-ball');
-        const tiltGuide = document.getElementById('tilt-guide');
-        const tiltVisual = document.getElementById('tilt-visual');
-
-        function showMessage(message) {
-            const msgBox = document.getElementById('message-box');
-            msgBox.textContent = message;
-            msgBox.classList.add('show');
-            setTimeout(() => {
-                msgBox.classList.remove('show');
-            }, 3000);
-        }
-
-        function formatCompassDirection(degrees) {
-            if (degrees < 0) degrees += 360;
-            const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-            const index = Math.round(degrees / 22.5);
-            const direction = directions[index % 16];
-            return `${direction} (${Math.round(degrees)}°)`;
-        }
-
-        function hasSensorSupport() {
-            return (window.DeviceOrientationEvent && 'ondeviceorientation' in window) || (window.DeviceMotionEvent && 'ondevicemotion' in window);
-        }
-
-        async function requestSensorPermissions() {
-            if (typeof DeviceOrientationEvent.requestPermission === 'function' && !permissionsRequested) {
-                try {
-                    const permissionState = await DeviceOrientationEvent.requestPermission();
-                    if (permissionState === 'granted') {
-                        startListeners();
-                        permissionsRequested = true;
-                        return true;
-                    } else {
-                        showMessage('Permission to access sensors was denied.');
-                        return false;
-                    }
-                } catch (error) {
-                    console.error('Permission request failed:', error);
-                    showMessage('Permission request for device sensors failed. Please check your browser settings.');
-                    return false;
-                }
-            } else {
-                startListeners();
-                permissionsRequested = true;
-                return true;
-            }
-        }
-
-        function startListeners() {
-            if (!permissionsRequested) {
-                window.addEventListener('deviceorientation', handleOrientation);
-                window.addEventListener('devicemotion', handleMotion);
-                permissionsRequested = true;
-            }
-        }
-
-        function handleOrientation(event) {
-            latestOrientationData.alpha = event.webkitCompassHeading || event.alpha;
-            latestOrientationData.beta = event.beta;
-            latestOrientationData.gamma = event.gamma;
-
-            if (latestOrientationData.alpha === null) {
-                compassDisplay.textContent = 'No Compass Data';
-                compassNeedle.style.transform = `rotate(0deg)`;
-                strikeBtn.disabled = true;
-                return;
-            } else {
-                strikeBtn.disabled = false;
-            }
-
-            // Compass display logic now depends on which measurement is active
-            if (isMeasuringStrike || isMeasuringDipDirection) {
-                compassDisplay.textContent = formatCompassDirection(latestOrientationData.alpha);
-                compassNeedle.style.transform = `rotate(${-latestOrientationData.alpha}deg)`;
-            } else if (strikeValue !== null) {
-                compassDisplay.textContent = formatCompassDirection(strikeValue);
-                compassNeedle.style.transform = `rotate(${-strikeValue}deg)`;
-            } else {
-                 compassDisplay.textContent = 'Compass';
-                 compassNeedle.style.transform = `rotate(0deg)`;
-            }
-        }
-
-        function handleMotion(event) {
-            const beta = latestOrientationData.beta;
-            const gamma = latestOrientationData.gamma;
-            
-            const maxOffset = 55;
-            const normalizedGamma = (gamma / 90) * maxOffset;
-            const normalizedBeta = (beta / 90) * maxOffset;
-            tiltBall.style.transform = `translate(${normalizedGamma}px, ${normalizedBeta}px)`;
-
-            if (isMeasuringDip) {
-                const alpha = latestOrientationData.alpha;
-                if (alpha === null) {
-                    tiltDisplay.textContent = 'No Compass Data';
-                    return;
-                }
-
-                const strikeAngle = strikeValue;
-                const currentHeading = alpha;
-                let angleDifference = Math.abs(strikeAngle - currentHeading);
-                if (angleDifference > 180) {
-                    angleDifference = 360 - angleDifference;
-                }
-                
-                const tolerance = 5;
-
-                let dipAngle;
-                if (angleDifference >= (90 - tolerance) && angleDifference <= (90 + tolerance)) {
-                    tiltVisual.style.borderColor = '#4CAF50';
-                    tiltGuide.style.backgroundColor = '#4CAF50';
-                    tiltBall.style.backgroundColor = '#4CAF50';
-                    dipAngle = Math.round(Math.abs(beta));
-                    dipValue = dipAngle;
-                    tiltDisplay.textContent = `Dip: ${dipValue}°`;
-                    showMessage('Phone is correctly aligned. Tap "Lock Dip" to save the value.');
-
-                } else {
-                    tiltVisual.style.borderColor = '#5a5a5a';
-                    tiltGuide.style.backgroundColor = '#f0f0f0';
-                    tiltBall.style.backgroundColor = '#008cff';
-                    dipValue = null;
-                    tiltDisplay.textContent = 'Align Perpendicularly';
-                    showMessage('Align phone perpendicular to strike to measure dip.');
-                }
-            } else {
-                const tiltAngle = Math.round(Math.abs(latestOrientationData.beta));
-                tiltDisplay.textContent = `${tiltAngle}°`;
-                tiltVisual.style.borderColor = '#5a5a5a';
-                tiltGuide.style.backgroundColor = '#f0f0f0';
-                tiltBall.style.backgroundColor = '#008cff';
-            }
-        }
-
-        strikeBtn.addEventListener('click', async () => {
-            if (!hasSensorSupport()) {
-                showMessage('Your device does not support the necessary sensors.');
-                return;
-            }
-
-            const hasPermission = await requestSensorPermissions();
-            if (!hasPermission) return;
-
-            if (isMeasuringStrike) {
-                strikeValue = Math.round(latestOrientationData.alpha);
-                strikeDisplay.textContent = formatCompassDirection(strikeValue);
-                isMeasuringStrike = false;
-                dipBtn.disabled = false;
-                strikeBtn.textContent = 'Re-measure Strike';
-                showMessage('Strike measurement complete! The compass is now locked.');
-            } else {
-                strikeValue = null;
-                strikeDisplay.textContent = '---';
-                dipValue = null;
-                dipDisplay.textContent = '---';
-                dipDirectionValue = null;
-                dipDirectionDisplay.textContent = '---';
-                isMeasuringStrike = true;
-                isMeasuringDip = false;
-                isMeasuringDipDirection = false;
-                dipBtn.disabled = true;
-                dipDirectionBtn.disabled = true;
-                saveBtn.disabled = true;
-                strikeBtn.textContent = 'Lock Strike';
-                showMessage('Tap the button again to lock the strike value.');
-            }
-        });
-
-        dipBtn.addEventListener('click', () => {
-            if (strikeValue === null) {
-                showMessage('Please measure the strike first.');
-                return;
-            }
-            
-            if (isMeasuringDip) {
-                if (dipValue !== null) {
-                    isMeasuringDip = false;
-                    dipBtn.textContent = 'Re-measure Dip';
-                    dipDirectionBtn.disabled = false; // Enable dip direction button
-                    showMessage('Dip measurement locked.');
-                } else {
-                    showMessage('Please align phone perpendicular to strike before locking dip.');
-                }
-            } else {
-                isMeasuringDip = true;
-                isMeasuringStrike = false;
-                isMeasuringDipDirection = false;
-                dipValue = null;
-                dipDisplay.textContent = '---';
-                dipDirectionBtn.disabled = true;
-                saveBtn.disabled = true;
-                dipBtn.textContent = 'Lock Dip';
-                showMessage('Measuring Dip... Turn device perpendicular to strike and tap the button to lock.');
-            }
-        });
-        
-        // New event listener for Dip Direction
-        dipDirectionBtn.addEventListener('click', () => {
-            if (isMeasuringDipDirection) {
-                dipDirectionValue = Math.round(latestOrientationData.alpha);
-                dipDirectionDisplay.textContent = formatCompassDirection(dipDirectionValue);
-                isMeasuringDipDirection = false;
-                saveBtn.disabled = false;
-                dipDirectionBtn.textContent = 'Re-measure Dip Direction';
-                showMessage('Dip Direction measurement complete! Tap save to store your data.');
-            } else {
-                dipDirectionValue = null;
-                dipDirectionDisplay.textContent = '---';
-                isMeasuringDipDirection = true;
-                isMeasuringStrike = false;
-                isMeasuringDip = false;
-                saveBtn.disabled = true;
-                dipDirectionBtn.textContent = 'Lock Dip Direction';
-                showMessage('Tap the button again to lock the dip direction value.');
-            }
-        });
-
-        saveBtn.addEventListener('click', () => {
-            if (strikeValue === null || dipValue === null || dipDirectionValue === null) {
-                showMessage('Please complete all measurements before saving.');
-                return;
-            }
-            const time = new Date().toLocaleString();
-            const coordinates = `${coordLatInput.value}, ${coordLonInput.value}`;
-            measurements.push({
-                time,
-                coordinates,
-                strike: formatCompassDirection(strikeValue),
-                dip: dipValue,
-                dipDirection: formatCompassDirection(dipDirectionValue) // Add to saved data
-            });
-            showMessage('Measurements saved successfully!');
-            saveBtn.disabled = true;
-            dipBtn.disabled = true;
-            dipDirectionBtn.disabled = true;
-            strikeBtn.textContent = 'Start measuring strike';
-            strikeValue = null;
-            dipValue = null;
-            dipDirectionValue = null;
-            strikeDisplay.textContent = '---';
-            dipDisplay.textContent = '---';
-            dipDirectionDisplay.textContent = '---';
-            dipBtn.textContent = 'Start measuring dip';
-            dipDirectionBtn.textContent = 'Start measuring dip direction';
-        });
-        
-        restartBtn.addEventListener('click', () => {
-            isMeasuringStrike = false;
-            isMeasuringDip = false;
-            isMeasuringDipDirection = false;
-            strikeValue = null;
-            dipValue = null;
-            dipDirectionValue = null;
-            strikeDisplay.textContent = '---';
-            dipDisplay.textContent = '---';
-            dipDirectionDisplay.textContent = '---';
-            strikeBtn.textContent = 'Start measuring strike';
-            dipBtn.textContent = 'Start measuring dip';
-            dipDirectionBtn.textContent = 'Start measuring dip direction';
-            dipBtn.disabled = true;
-            dipDirectionBtn.disabled = true;
-            saveBtn.disabled = true;
-            showMessage('Measurements have been reset.');
-        });
-
-        showChartBtn.addEventListener('click', () => {
-            mainAppPage.classList.remove('active');
-            chartPage.classList.add('active');
-            updateChartTable();
-        });
-
-        backToAppBtn.addEventListener('click', () => {
-            chartPage.classList.remove('active');
-            mainAppPage.classList.add('active');
-        });
-
-        function updateChartTable() {
-            measurementsTableBody.innerHTML = '';
-            measurements.forEach(item => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${item.time}</td>
-                    <td>${item.coordinates}</td>
-                    <td>${item.strike}</td>
-                    <td>${item.dip}°</td>
-                    <td>${item.dipDirection}</td>
-                `;
-                measurementsTableBody.appendChild(row);
-            });
-        }
-        
-        savePdfBtn.addEventListener('click', async () => {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.text("Geological Compass Measurements", 10, 10);
-            
-            const table = document.getElementById('measurements-table');
-            doc.html(table, {
-                callback: function (doc) {
-                    doc.save('geological-measurements.pdf');
-                },
-                x: 10,
-                y: 20
-            });
-        });
-        
-        saveJpgBtn.addEventListener('click', () => {
-            const table = document.getElementById('measurements-table');
-            html2canvas(table).then(canvas => {
-                const imgData = canvas.toDataURL('image/jpeg');
-                const link = document.createElement('a');
-                link.href = imgData;
-                link.download = 'geological-measurements.jpg';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            });
-        });
-    </script>
-</body>
-</html>        }
-
-        .display-box {
-            background-color: #333;
-            border-radius: 10px;
-            width: 100%;
-            height: 150px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            color: #888;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .compass-tilt-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .label {
-            font-weight: 500;
-            color: #ccc;
-        }
-
-        .value-display {
-            background-color: #444;
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 1.2rem;
-            min-width: 120px;
-            text-align: center;
-        }
-
-        .input-group {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 15px;
-        }
-
-        .coordinates-group {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .coordinate-input {
-            background-color: #444;
-            border: none;
-            padding: 10px;
-            border-radius: 8px;
-            text-align: center;
-            width: 80px;
-        }
-        
-        .btn-group {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .btn {
-            background-color: #4a4a4a;
-            color: #f0f0f0;
-            padding: 15px 20px;
-            border-radius: 10px;
-            border: none;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.2s;
-            box-shadow: 0 4px #2a2a2a;
-        }
-
-        .btn:hover {
-            background-color: #5a5a5a;
-            transform: translateY(-2px);
-        }
-
-        .btn:active {
-            transform: translateY(2px);
-            box-shadow: 0 2px #2a2a2a;
-        }
-
-        .start-btn {
-            background-color: #556B2F;
-            color: #fff;
-            box-shadow: 0 4px #3C4B22;
-        }
-        .start-btn:hover {
-            background-color: #6a823d;
-        }
-        .start-btn:active {
-            box-shadow: 0 2px #3C4B22;
-        }
-
-        .message-box {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #4a4a4a;
-            color: #fff;
-            padding: 15px 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.5s ease-in-out;
-            pointer-events: none;
-        }
-
-        .message-box.show {
-            opacity: 1;
-        }
-
-        .page {
-            display: none;
-        }
-
-        .page.active {
-            display: block;
-        }
-
-        .chart-page {
-            max-width: 800px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        th, td {
-            border: 1px solid #444;
-            padding: 12px;
-            text-align: left;
-        }
-
-        th {
-            background-color: #333;
-            color: #f0f0f0;
-            font-weight: 700;
-        }
-
-        td {
-            background-color: #2a2a2a;
-        }
-
-        #compass-visual {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 80%;
-            height: 80%;
-            border: 2px solid #5a5a5a;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: transform 0.1s ease-in-out;
-        }
-
-        .compass-needle {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 100%;
-            height: 100%;
-            transform-origin: 50% 50%;
-            transition: transform 0.1s ease-in-out;
-        }
-
-        .compass-needle::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 40%;
-            border-left: 5px solid transparent;
-            border-right: 5px solid transparent;
-            border-bottom: 20px solid #f00;
-        }
-        
-        .compass-marker {
-            position: absolute;
-            font-size: 0.8rem;
-            color: #f0f0f0;
-            font-weight: 600;
-            transform: translate(-50%, -50%);
-        }
-
-        .compass-marker.n { top: 0%; left: 50%; }
-        .compass-marker.ne { top: 14.6%; left: 85.4%; }
-        .compass-marker.e { top: 50%; left: 100%; }
-        .compass-marker.se { top: 85.4%; left: 85.4%; }
-        .compass-marker.s { top: 100%; left: 50%; }
-        .compass-marker.sw { top: 85.4%; left: 14.6%; }
-        .compass-marker.w { top: 50%; left: 0%; }
-        .compass-marker.nw { top: 14.6%; left: 14.6%; }
-        
-        #tilt-visual {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 80%;
-            height: 80%;
-            border: 2px solid #5a5a5a;
-            border-radius: 10px;
-            transform: translate(-50%, -50%);
-        }
-        
-        #tilt-guide {
-            position: absolute;
-            top: 0;
-            left: 50%;
-            width: 2px;
-            height: 100%;
-            background-color: #f0f0f0;
-            transform: translateX(-50%);
-            transition: background-color 0.2s;
-        }
-
-        .tilt-ball {
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            background-color: #008cff;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: transform 0.1s ease-out;
-        }
-        
-        #compass-display, #tilt-display {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 1.2rem;
-            z-index: 10;
-            color: #e0e0e0;
-            background-color: rgba(42, 42, 42, 0.7);
-            padding: 5px 10px;
-            border-radius: 5px;
-        }
-    </style>
-</head>
-<body>
-    <div id="main-app" class="page active container">
-        <div class="header">Geological Compass</div>
-        <div class="compass-tilt-grid">
-            <div>
-                <div class="display-box">
-                    <div id="compass-visual">
-                        <div class="compass-needle"></div>
-                        <span class="compass-marker n">N</span>
-                        <span class="compass-marker ne">NE</span>
-                        <span class="compass-marker e">E</span>
-                        <span class="compass-marker se">SE</span>
-                        <span class="compass-marker s">S</span>
-                        <span class="compass-marker sw">SW</span>
-                        <span class="compass-marker w">W</span>
-                        <span class="compass-marker nw">NW</span>
-                    </div>
-                    <span id="compass-display">Compass</span>
-                </div>
-                <div class="label">Compass</div>
-            </div>
-            <div>
-                <div class="display-box">
-                    <div id="tilt-visual">
-                        <div id="tilt-guide"></div>
-                        <div id="tilt-ball" class="tilt-ball"></div>
-                    </div>
-                    <span id="tilt-display">Tilt</span>
-                </div>
-                <div class="label">Tilt</div>
-            </div>
-        </div>
-
-        <div class="input-group">
-            <div class="label">Strike</div>
-            <div id="strike-display" class="value-display">---</div>
-            <button id="strike-btn" class="btn start-btn">Start measuring strike</button>
-        </div>
-
-        <div class="input-group">
-            <div class="label">Dip</div>
-            <div id="dip-display" class="value-display">---</div>
-            <button id="dip-btn" class="btn start-btn" disabled>Start measuring dip</button>
-        </div>
-        
-        <div class="input-group">
-            <div class="label">Coordinates</div>
-            <div class="coordinates-group">
-                <input type="text" id="coord-lat" class="coordinate-input" placeholder="Latitude" value="N">
-                <input type="text" id="coord-lon" class="coordinate-input" placeholder="Longitude" value="E">
-            </div>
-        </div>
-        
-        <div class="btn-group">
-            <button id="restart-btn" class="btn">Re-Start measurements</button>
-            <button id="save-btn" class="btn" disabled>Save Measurements</button>
-            <button id="show-chart-btn" class="btn">Show Chart</button>
-        </div>
+    
+    <div class="input-group">
+      <label class="label">Dip Direction</label>
+      <input type="number" id="dip-direction" class="input" placeholder="Enter Dip Direction (°)" min="0" max="360">
     </div>
-
-    <div id="chart-page" class="page chart-page container">
-        <div class="header">Saved Measurements</div>
-        <table id="measurements-table">
-            <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Coordinates</th>
-                    <th>Strike</th>
-                    <th>Dip</th>
-                </tr>
-            </thead>
-            <tbody>
-            </tbody>
-        </table>
-        <div class="btn-group mt-5">
-            <button id="save-pdf-btn" class="btn">Save as PDF</button>
-            <button id="save-jpg-btn" class="btn">Save as JPG</button>
-            <button id="back-to-app-btn" class="btn">Back to App</button>
-        </div>
+    
+    <div class="input-group">
+      <div class="label">Coordinates</div>
+      <div class="coordinates-group">
+        <input type="text" id="coord-lat" class="coordinate-input" placeholder="Latitude (WGS84)">
+        <input type="text" id="coord-lon" class="coordinate-input" placeholder="Longitude (WGS84)">
+        <button id="get-coord-btn" class="btn start-btn">Get GPS</button>
+      </div>
     </div>
+    
+    <button id="save-btn" class="btn save-btn">Save Measurement</button>
+    <button id="clear-btn" class="btn clear-btn">Clear All</button>
+    
+    <div id="message" class="message"></div>
+    
+    <div class="records">
+      <h2>Saved Records</h2>
+      <div id="records-list"></div>
+    </div>
+  </div>
+  
+  <script>
+    const strikeInput = document.getElementById("strike");
+    const dipInput = document.getElementById("dip");
+    const dipDirInput = document.getElementById("dip-direction");
+    const coordLatInput = document.getElementById("coord-lat");
+    const coordLonInput = document.getElementById("coord-lon");
+    const saveBtn = document.getElementById("save-btn");
+    const clearBtn = document.getElementById("clear-btn");
+    const getCoordBtn = document.getElementById("get-coord-btn");
+    const recordsList = document.getElementById("records-list");
+    const messageBox = document.getElementById("message");
 
-    <div id="message-box" class="message-box"></div>
+    function showMessage(msg, type="success") {
+      messageBox.textContent = msg;
+      messageBox.className = "message " + type;
+      messageBox.style.display = "block";
+      setTimeout(() => messageBox.style.display = "none", 3000);
+    }
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    function getCurrentCoordinates() {
+      if (!navigator.geolocation) {
+        showMessage("Geolocation not supported by your browser.", "error");
+        return;
+      }
 
-    <script>
-        let strikeValue = null;
-        let dipValue = null;
-        let isMeasuringStrike = false;
-        let isMeasuringDip = false;
-        let measurements = [];
-        let permissionsRequested = false;
-        let latestOrientationData = { alpha: 0, beta: 0, gamma: 0 };
-        let latestMotionData = { beta: 0, gamma: 0 };
-
-        const strikeDisplay = document.getElementById('strike-display');
-        const dipDisplay = document.getElementById('dip-display');
-        const compassDisplay = document.getElementById('compass-display');
-        const tiltDisplay = document.getElementById('tilt-display');
-        const strikeBtn = document.getElementById('strike-btn');
-        const dipBtn = document.getElementById('dip-btn');
-        const saveBtn = document.getElementById('save-btn');
-        const restartBtn = document.getElementById('restart-btn');
-        const showChartBtn = document.getElementById('show-chart-btn');
-        const savePdfBtn = document.getElementById('save-pdf-btn');
-        const saveJpgBtn = document.getElementById('save-jpg-btn');
-        const backToAppBtn = document.getElementById('back-to-app-btn');
-        const mainAppPage = document.getElementById('main-app');
-        const chartPage = document.getElementById('chart-page');
-        const measurementsTableBody = document.querySelector('#measurements-table tbody');
-        const coordLatInput = document.getElementById('coord-lat');
-        const coordLonInput = document.getElementById('coord-lon');
-        const compassNeedle = document.querySelector('.compass-needle');
-        const tiltBall = document.getElementById('tilt-ball');
-        const tiltGuide = document.getElementById('tilt-guide');
-        const tiltVisual = document.getElementById('tilt-visual');
-
-        function showMessage(message) {
-            const msgBox = document.getElementById('message-box');
-            msgBox.textContent = message;
-            msgBox.classList.add('show');
-            setTimeout(() => {
-                msgBox.classList.remove('show');
-            }, 3000);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude.toFixed(6);
+          const lon = position.coords.longitude.toFixed(6);
+          coordLatInput.value = lat + " N";
+          coordLonInput.value = lon + " E";
+          showMessage("Coordinates updated (WGS84).", "success");
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          showMessage("Unable to get GPS. Allow permission.", "error");
         }
+      );
+    }
 
-        function formatCompassDirection(degrees) {
-            if (degrees < 0) degrees += 360;
-            const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-            const index = Math.round(degrees / 22.5);
-            const direction = directions[index % 16];
-            return `${direction} (${Math.round(degrees)}°)`;
-        }
+    function loadRecords() {
+      const records = JSON.parse(localStorage.getItem("geoRecords")) || [];
+      recordsList.innerHTML = "";
+      records.forEach((rec, index) => {
+        const div = document.createElement("div");
+        div.className = "record";
+        div.innerHTML = `
+          <strong>Strike:</strong> ${rec.strike}° | 
+          <strong>Dip:</strong> ${rec.dip}° | 
+          <strong>Dip Dir:</strong> ${rec.dipDirection}° <br>
+          <strong>Coordinates:</strong> ${rec.coordinates}
+        `;
+        recordsList.appendChild(div);
+      });
+    }
 
-        function hasSensorSupport() {
-            return (window.DeviceOrientationEvent && 'ondeviceorientation' in window) || (window.DeviceMotionEvent && 'ondevicemotion' in window);
-        }
+    saveBtn.addEventListener("click", () => {
+      const strike = strikeInput.value;
+      const dip = dipInput.value;
+      const dipDirection = dipDirInput.value;
+      const coordinates = `${coordLatInput.value}, ${coordLonInput.value}`;
+      
+      if (!strike || !dip || !dipDirection || !coordLatInput.value || !coordLonInput.value) {
+        showMessage("Please fill all fields before saving.", "error");
+        return;
+      }
 
-        async function requestSensorPermissions() {
-            if (typeof DeviceOrientationEvent.requestPermission === 'function' && !permissionsRequested) {
-                try {
-                    const permissionState = await DeviceOrientationEvent.requestPermission();
-                    if (permissionState === 'granted') {
-                        startListeners();
-                        permissionsRequested = true;
-                        return true;
-                    } else {
-                        showMessage('Permission to access sensors was denied.');
-                        return false;
-                    }
-                } catch (error) {
-                    console.error('Permission request failed:', error);
-                    showMessage('Permission request for device sensors failed. Please check your browser settings.');
-                    return false;
-                }
-            } else {
-                startListeners();
-                permissionsRequested = true;
-                return true;
-            }
-        }
+      const record = { strike, dip, dipDirection, coordinates };
+      const records = JSON.parse(localStorage.getItem("geoRecords")) || [];
+      records.push(record);
+      localStorage.setItem("geoRecords", JSON.stringify(records));
 
-        function startListeners() {
-            if (!permissionsRequested) {
-                window.addEventListener('deviceorientation', handleOrientation);
-                window.addEventListener('devicemotion', handleMotion);
-                permissionsRequested = true;
-            }
-        }
+      showMessage("Record saved successfully!");
+      loadRecords();
+      strikeInput.value = "";
+      dipInput.value = "";
+      dipDirInput.value = "";
+      coordLatInput.value = "";
+      coordLonInput.value = "";
+    });
 
-        function handleOrientation(event) {
-            latestOrientationData.alpha = event.webkitCompassHeading || event.alpha;
-            latestOrientationData.beta = event.beta;
-            latestOrientationData.gamma = event.gamma;
+    clearBtn.addEventListener("click", () => {
+      localStorage.removeItem("geoRecords");
+      loadRecords();
+      showMessage("All records cleared.", "success");
+    });
 
-            if (latestOrientationData.alpha === null) {
-                compassDisplay.textContent = 'No Compass Data';
-                compassNeedle.style.transform = `rotate(0deg)`;
-                strikeBtn.disabled = true;
-                return;
-            } else {
-                strikeBtn.disabled = false;
-            }
+    getCoordBtn.addEventListener("click", getCurrentCoordinates);
 
-            if (!isMeasuringStrike && strikeValue !== null) {
-                compassDisplay.textContent = formatCompassDirection(strikeValue);
-                compassNeedle.style.transform = `rotate(${-strikeValue}deg)`;
-            } else {
-                compassDisplay.textContent = formatCompassDirection(latestOrientationData.alpha);
-                compassNeedle.style.transform = `rotate(${-latestOrientationData.alpha}deg)`;
-            }
-        }
-
-        function handleMotion(event) {
-            const beta = latestOrientationData.beta;
-            const gamma = latestOrientationData.gamma;
-            
-            const maxOffset = 55;
-            const normalizedGamma = (gamma / 90) * maxOffset;
-            const normalizedBeta = (beta / 90) * maxOffset;
-            tiltBall.style.transform = `translate(${normalizedGamma}px, ${normalizedBeta}px)`;
-
-            if (isMeasuringDip) {
-                const alpha = latestOrientationData.alpha;
-                if (alpha === null) {
-                    tiltDisplay.textContent = 'No Compass Data';
-                    return;
-                }
-
-                const strikeAngle = strikeValue;
-                const currentHeading = alpha;
-                let angleDifference = Math.abs(strikeAngle - currentHeading);
-                if (angleDifference > 180) {
-                    angleDifference = 360 - angleDifference;
-                }
-                
-                // Set the tolerance for "perpendicular" alignment
-                const tolerance = 5;
-
-                let dipAngle;
-                if (angleDifference >= (90 - tolerance) && angleDifference <= (90 + tolerance)) {
-                    tiltVisual.style.borderColor = '#4CAF50';
-                    tiltGuide.style.backgroundColor = '#4CAF50';
-                    tiltBall.style.backgroundColor = '#4CAF50';
-                    dipAngle = Math.round(Math.abs(beta));
-                    dipValue = dipAngle;
-                    tiltDisplay.textContent = `Dip: ${dipValue}°`;
-                    showMessage('Phone is correctly aligned. Tap "Lock Dip" to save the value.');
-
-                } else {
-                    tiltVisual.style.borderColor = '#5a5a5a';
-                    tiltGuide.style.backgroundColor = '#f0f0f0';
-                    tiltBall.style.backgroundColor = '#008cff';
-                    dipValue = null;
-                    tiltDisplay.textContent = 'Align Perpendicularly';
-                    showMessage('Align phone perpendicular to strike to measure dip.');
-                }
-            } else {
-                const tiltAngle = Math.round(Math.abs(latestOrientationData.beta));
-                tiltDisplay.textContent = `${tiltAngle}°`;
-                tiltVisual.style.borderColor = '#5a5a5a';
-                tiltGuide.style.backgroundColor = '#f0f0f0';
-                tiltBall.style.backgroundColor = '#008cff';
-            }
-        }
-
-        strikeBtn.addEventListener('click', async () => {
-            if (!hasSensorSupport()) {
-                showMessage('Your device does not support the necessary sensors.');
-                return;
-            }
-
-            const hasPermission = await requestSensorPermissions();
-            if (!hasPermission) return;
-
-            if (isMeasuringStrike) {
-                strikeValue = Math.round(latestOrientationData.alpha);
-                strikeDisplay.textContent = formatCompassDirection(strikeValue);
-                isMeasuringStrike = false;
-                dipBtn.disabled = false;
-                strikeBtn.textContent = 'Re-measure Strike';
-                saveBtn.disabled = false;
-                showMessage('Strike measurement complete! The compass is now locked.');
-            } else {
-                strikeValue = null;
-                strikeDisplay.textContent = '---';
-                dipValue = null;
-                dipDisplay.textContent = '---';
-                isMeasuringStrike = true;
-                isMeasuringDip = false;
-                dipBtn.disabled = true;
-                saveBtn.disabled = true;
-                strikeBtn.textContent = 'Lock Strike';
-                showMessage('Tap the button again to lock the strike value.');
-            }
-        });
-
-        dipBtn.addEventListener('click', () => {
-            if (strikeValue === null) {
-                showMessage('Please measure the strike first.');
-                return;
-            }
-            
-            if (isMeasuringDip) {
-                if (dipValue !== null) {
-                    isMeasuringDip = false;
-                    dipBtn.textContent = 'Re-measure Dip';
-                    saveBtn.disabled = false;
-                    showMessage('Dip measurement locked.');
-                } else {
-                    showMessage('Please align phone perpendicular to strike before locking dip.');
-                }
-            } else {
-                isMeasuringDip = true;
-                isMeasuringStrike = false;
-                dipValue = null;
-                dipDisplay.textContent = '---';
-                dipBtn.textContent = 'Lock Dip';
-                showMessage('Measuring Dip... Turn device perpendicular to strike and tap the button to lock.');
-            }
-        });
-        
-        saveBtn.addEventListener('click', () => {
-            if (strikeValue === null || dipValue === null) {
-                showMessage('Please complete both strike and dip measurements before saving.');
-                return;
-            }
-            const time = new Date().toLocaleString();
-            const coordinates = `${coordLatInput.value}, ${coordLonInput.value}`;
-            measurements.push({
-                time,
-                coordinates,
-                strike: formatCompassDirection(strikeValue),
-                dip: dipValue
-            });
-            showMessage('Measurements saved successfully!');
-            saveBtn.disabled = true;
-            dipBtn.disabled = true;
-            strikeBtn.textContent = 'Start measuring strike';
-            strikeValue = null;
-            dipValue = null;
-            strikeDisplay.textContent = '---';
-            dipDisplay.textContent = '---';
-            dipBtn.textContent = 'Start measuring dip';
-        });
-        
-        restartBtn.addEventListener('click', () => {
-            isMeasuringStrike = false;
-            isMeasuringDip = false;
-            strikeValue = null;
-            dipValue = null;
-            strikeDisplay.textContent = '---';
-            dipDisplay.textContent = '---';
-            strikeBtn.textContent = 'Start measuring strike';
-            dipBtn.textContent = 'Start measuring dip';
-            dipBtn.disabled = true;
-            saveBtn.disabled = true;
-            showMessage('Measurements have been reset.');
-        });
-
-        showChartBtn.addEventListener('click', () => {
-            mainAppPage.classList.remove('active');
-            chartPage.classList.add('active');
-            updateChartTable();
-        });
-
-        backToAppBtn.addEventListener('click', () => {
-            chartPage.classList.remove('active');
-            mainAppPage.classList.add('active');
-        });
-
-        function updateChartTable() {
-            measurementsTableBody.innerHTML = '';
-            measurements.forEach(item => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${item.time}</td>
-                    <td>${item.coordinates}</td>
-                    <td>${item.strike}</td>
-                    <td>${item.dip}°</td>
-                `;
-                measurementsTableBody.appendChild(row);
-            });
-        }
-        
-        savePdfBtn.addEventListener('click', async () => {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.text("Geological Compass Measurements", 10, 10);
-            
-            const table = document.getElementById('measurements-table');
-            doc.html(table, {
-                callback: function (doc) {
-                    doc.save('geological-measurements.pdf');
-                },
-                x: 10,
-                y: 20
-            });
-        });
-        
-        saveJpgBtn.addEventListener('click', () => {
-            const table = document.getElementById('measurements-table');
-            html2canvas(table).then(canvas => {
-                const imgData = canvas.toDataURL('image/jpeg');
-                const link = document.createElement('a');
-                link.href = imgData;
-                link.download = 'geological-measurements.jpg';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            });
-        });
-    </script>
+    loadRecords();
+  </script>
 </body>
 </html>
