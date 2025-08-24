@@ -133,9 +133,9 @@
 
     <script>
         // Global variables for sensor data and state
-        let currentAlpha = 0;
-        let currentBeta = 0;
-        let currentGamma = 0;
+        let currentAlpha = null;
+        let currentBeta = null;
+        let currentGamma = null;
         let permissionsRequested = false;
 
         // Cache DOM elements
@@ -180,36 +180,40 @@
 
         // Check for device orientation and motion support on mobile
         function hasSensorSupport() {
-            return (window.DeviceOrientationEvent && 'ondeviceorientation' in window) || (window.DeviceMotionEvent && 'ondevicemotion' in window);
+            return (window.DeviceOrientationEvent && 'ondeviceorientation' in window) && (window.DeviceMotionEvent && 'ondevicemotion' in window);
         }
 
-        // Request permissions for iOS 13+
-        async function requestSensorPermissions() {
-            if (typeof DeviceOrientationEvent.requestPermission === 'function' && !permissionsRequested) {
-                try {
-                    const permissionState = await DeviceOrientationEvent.requestPermission();
-                    if (permissionState === 'granted') {
-                        startListeners();
-                        permissionsRequested = true;
-                    } else {
-                        showMessage('Permission to access sensors was denied.');
-                    }
-                } catch (error) {
-                    console.error('Permission request failed:', error);
-                    showMessage('Permission request for device sensors failed. Please check your browser settings.');
-                }
-            } else {
-                startListeners();
-                permissionsRequested = true;
-            }
-        }
-        
-        // Start device sensor listeners
+        // Start device sensor listeners only after permission is granted
         function startListeners() {
             window.addEventListener('deviceorientation', handleOrientation);
             window.addEventListener('devicemotion', handleMotion);
         }
 
+        // Request permissions for iOS 13+ and start listeners on success
+        async function requestSensorPermissions() {
+            if (typeof DeviceOrientationEvent.requestPermission === 'function' && !permissionsRequested) {
+                try {
+                    const permissionState = await DeviceOrientationEvent.requestPermission();
+                    if (permissionState === 'granted') {
+                        permissionsRequested = true;
+                        startListeners();
+                        return true;
+                    } else {
+                        showMessage('Permission to access sensors was denied. Please grant permission in your browser settings.');
+                        return false;
+                    }
+                } catch (error) {
+                    console.error('Permission request failed:', error);
+                    showMessage('Permission request failed. Please check your browser settings.');
+                    return false;
+                }
+            } else {
+                // For Android or older iOS, just start listeners
+                startListeners();
+                return true;
+            }
+        }
+        
         // Handle device orientation events for compass
         function handleOrientation(event) {
             const alpha = event.webkitCompassHeading || event.alpha;
@@ -225,20 +229,29 @@
         }
 
         // Event listener for the single measure button
-        measureBtn.addEventListener('click', () => {
+        measureBtn.addEventListener('click', async () => {
             if (!hasSensorSupport()) {
                 showMessage('Your device does not support the necessary sensors.');
                 return;
             }
-            requestSensorPermissions();
 
-            if (typeof currentAlpha !== 'number' || isNaN(currentAlpha)) {
-                showMessage('Compass data not available. Please ensure your device has a compass.');
+            if (!permissionsRequested) {
+                const isGranted = await requestSensorPermissions();
+                if (!isGranted) {
+                    return;
+                }
+            }
+
+            // After permission is granted, wait a moment for sensor data to populate
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            if (currentAlpha === null || isNaN(currentAlpha)) {
+                showMessage('Compass data not available. Please try again.');
                 return;
             }
 
-            if (typeof currentBeta !== 'number' || isNaN(currentBeta)) {
-                showMessage('Tilt data not available. Please ensure device motion is active.');
+            if (currentBeta === null || isNaN(currentBeta)) {
+                showMessage('Tilt data not available. Please try again or check device permissions.');
                 return;
             }
 
@@ -266,8 +279,6 @@
             showMessage('Measurements captured!');
         });
         
-        // Initial setup to listen for sensor data
-        startListeners();
     </script>
 </body>
 </html>
