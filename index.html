@@ -528,17 +528,13 @@
             requestSensorPermissions();
 
             if (isMeasuringStrike) {
-                if (Math.abs(latestMotionData.beta) < 10 && Math.abs(latestMotionData.gamma) < 10) {
-                    strikeValue = Math.round(latestOrientationData.alpha);
-                    strikeDisplay.textContent = formatCompassDirection(strikeValue);
-                    isMeasuringStrike = false;
-                    dipBtn.disabled = false;
-                    strikeBtn.textContent = 'Re-measure Strike';
-                    saveBtn.disabled = false;
-                    showMessage('Strike measurement complete! The compass is now locked.');
-                } else {
-                    showMessage('Keep your device horizontal to lock the strike.');
-                }
+                strikeValue = Math.round(latestOrientationData.alpha);
+                strikeDisplay.textContent = formatCompassDirection(strikeValue);
+                isMeasuringStrike = false;
+                dipBtn.disabled = false;
+                strikeBtn.textContent = 'Re-measure Strike';
+                saveBtn.disabled = false;
+                showMessage('Strike measurement complete! The compass is now locked.');
             } else {
                 strikeValue = null;
                 strikeDisplay.textContent = '---';
@@ -549,7 +545,7 @@
                 dipBtn.disabled = true;
                 saveBtn.disabled = true;
                 strikeBtn.textContent = 'Lock Strike';
-                showMessage('Measuring Strike... Align the red needle with the strike direction.');
+                showMessage('Tap the button again to lock the strike value.');
             }
         });
 
