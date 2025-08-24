@@ -421,7 +421,7 @@
             const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
             const index = Math.round(degrees / 22.5);
             const direction = directions[index % 16];
-            return ${direction} (${Math.round(degrees)}°);
+            return `${direction} (${Math.round(degrees)}°)`;
         }
 
         function hasSensorSupport() {
@@ -435,30 +435,39 @@
                     if (permissionState === 'granted') {
                         startListeners();
                         permissionsRequested = true;
+                        return true;
                     } else {
                         showMessage('Permission to access sensors was denied.');
+                        return false;
                     }
                 } catch (error) {
                     console.error('Permission request failed:', error);
                     showMessage('Permission request for device sensors failed. Please check your browser settings.');
+                    return false;
                 }
             } else {
                 startListeners();
                 permissionsRequested = true;
+                return true;
             }
         }
-        
+
         function startListeners() {
-            window.addEventListener('deviceorientation', handleOrientation);
-            window.addEventListener('devicemotion', handleMotion);
+            if (!permissionsRequested) {
+                window.addEventListener('deviceorientation', handleOrientation);
+                window.addEventListener('devicemotion', handleMotion);
+                permissionsRequested = true;
+            }
         }
 
         function handleOrientation(event) {
             latestOrientationData.alpha = event.webkitCompassHeading || event.alpha;
-            
+            latestOrientationData.beta = event.beta;
+            latestOrientationData.gamma = event.gamma;
+
             if (latestOrientationData.alpha === null) {
                 compassDisplay.textContent = 'No Compass Data';
-                compassNeedle.style.transform = rotate(0deg);
+                compassNeedle.style.transform = `rotate(0deg)`;
                 strikeBtn.disabled = true;
                 return;
             } else {
@@ -467,21 +476,21 @@
 
             if (!isMeasuringStrike && strikeValue !== null) {
                 compassDisplay.textContent = formatCompassDirection(strikeValue);
-                compassNeedle.style.transform = rotate(${-strikeValue}deg);
+                compassNeedle.style.transform = `rotate(${-strikeValue}deg)`;
             } else {
                 compassDisplay.textContent = formatCompassDirection(latestOrientationData.alpha);
-                compassNeedle.style.transform = rotate(${-latestOrientationData.alpha}deg);
+                compassNeedle.style.transform = `rotate(${-latestOrientationData.alpha}deg)`;
             }
         }
 
         function handleMotion(event) {
-            latestMotionData.beta = event.beta;
-            latestMotionData.gamma = event.gamma;
-
+            const beta = latestOrientationData.beta;
+            const gamma = latestOrientationData.gamma;
+            
             const maxOffset = 55;
-            const normalizedGamma = (latestMotionData.gamma / 90) * maxOffset;
-            const normalizedBeta = (latestMotionData.beta / 90) * maxOffset;
-            tiltBall.style.transform = translate(${normalizedGamma}px, ${normalizedBeta}px);
+            const normalizedGamma = (gamma / 90) * maxOffset;
+            const normalizedBeta = (beta / 90) * maxOffset;
+            tiltBall.style.transform = `translate(${normalizedGamma}px, ${normalizedBeta}px)`;
 
             if (isMeasuringDip) {
                 const alpha = latestOrientationData.alpha;
@@ -490,42 +499,49 @@
                     return;
                 }
 
-                const strikeNorm = strikeValue;
-                const alphaNorm = alpha;
-                let angleDifference = Math.abs(strikeNorm - alphaNorm);
+                const strikeAngle = strikeValue;
+                const currentHeading = alpha;
+                let angleDifference = Math.abs(strikeAngle - currentHeading);
                 if (angleDifference > 180) {
                     angleDifference = 360 - angleDifference;
                 }
-                
-                const tiltAngle = Math.round(Math.sqrt(latestMotionData.gamma * latestMotionData.gamma + latestMotionData.beta * latestMotionData.beta));
 
+                let dipAngle;
                 if (angleDifference >= 85 && angleDifference <= 95) {
                     tiltVisual.style.borderColor = '#4CAF50';
                     tiltGuide.style.backgroundColor = '#4CAF50';
                     tiltBall.style.backgroundColor = '#4CAF50';
-                    tiltDisplay.textContent = Align Perpendicularly... ${tiltAngle}°;
-                    dipValue = tiltAngle;
+                    showMessage('Phone is correctly aligned. Tap "Lock Dip" to save the value.');
+                    
+                    dipAngle = Math.round(Math.abs(beta));
+                    dipValue = dipAngle;
+                    dipDisplay.textContent = `${dipValue}°`;
+
                 } else {
                     tiltVisual.style.borderColor = '#5a5a5a';
                     tiltGuide.style.backgroundColor = '#f0f0f0';
                     tiltBall.style.backgroundColor = '#008cff';
-                    tiltDisplay.textContent = Tilt: ${tiltAngle}°;
+                    showMessage('Align phone perpendicular to strike to measure dip.');
+                    dipDisplay.textContent = '---';
+                    dipValue = null;
                 }
             } else {
-                const tiltAngle = Math.round(Math.sqrt(latestMotionData.gamma * latestMotionData.gamma + latestMotionData.beta * latestMotionData.beta));
-                tiltDisplay.textContent = ${Math.abs(tiltAngle)}°;
+                const tiltAngle = Math.round(Math.abs(latestOrientationData.beta));
+                tiltDisplay.textContent = `${tiltAngle}°`;
                 tiltVisual.style.borderColor = '#5a5a5a';
                 tiltGuide.style.backgroundColor = '#f0f0f0';
                 tiltBall.style.backgroundColor = '#008cff';
             }
         }
-        
-        strikeBtn.addEventListener('click', () => {
+
+        strikeBtn.addEventListener('click', async () => {
             if (!hasSensorSupport()) {
                 showMessage('Your device does not support the necessary sensors.');
                 return;
             }
-            requestSensorPermissions();
+
+            const hasPermission = await requestSensorPermissions();
+            if (!hasPermission) return;
 
             if (isMeasuringStrike) {
                 strikeValue = Math.round(latestOrientationData.alpha);
@@ -554,12 +570,20 @@
                 showMessage('Please measure the strike first.');
                 return;
             }
-            isMeasuringDip = true;
-            isMeasuringStrike = false;
-            dipValue = null;
-            dipDisplay.textContent = '---';
-            dipBtn.textContent = 'Lock Dip';
-            showMessage('Measuring Dip... Turn device perpendicular to strike and find the maximum tilt.');
+            
+            if (isMeasuringDip) {
+                isMeasuringDip = false;
+                dipBtn.textContent = 'Re-measure Dip';
+                saveBtn.disabled = false;
+                showMessage('Dip measurement locked.');
+            } else {
+                isMeasuringDip = true;
+                isMeasuringStrike = false;
+                dipValue = null;
+                dipDisplay.textContent = '---';
+                dipBtn.textContent = 'Lock Dip';
+                showMessage('Measuring Dip... Turn device perpendicular to strike and tap the button to lock.');
+            }
         });
         
         saveBtn.addEventListener('click', () => {
@@ -568,7 +592,7 @@
                 return;
             }
             const time = new Date().toLocaleString();
-            const coordinates = ${coordLatInput.value}, ${coordLonInput.value};
+            const coordinates = `${coordLatInput.value}, ${coordLonInput.value}`;
             measurements.push({
                 time,
                 coordinates,
@@ -583,6 +607,7 @@
             dipValue = null;
             strikeDisplay.textContent = '---';
             dipDisplay.textContent = '---';
+            dipBtn.textContent = 'Start measuring dip';
         });
         
         restartBtn.addEventListener('click', () => {
@@ -593,6 +618,7 @@
             strikeDisplay.textContent = '---';
             dipDisplay.textContent = '---';
             strikeBtn.textContent = 'Start measuring strike';
+            dipBtn.textContent = 'Start measuring dip';
             dipBtn.disabled = true;
             saveBtn.disabled = true;
             showMessage('Measurements have been reset.');
@@ -650,8 +676,6 @@
                 document.body.removeChild(link);
             });
         });
-        
-        startListeners();
     </script>
 </body>
 </html>
