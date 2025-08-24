@@ -421,7 +421,7 @@
             const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
             const index = Math.round(degrees / 22.5);
             const direction = directions[index % 16];
-            return `${direction} (${Math.round(degrees)}°)`;
+            return ${direction} (${Math.round(degrees)}°);
         }
 
         function hasSensorSupport() {
@@ -458,7 +458,7 @@
             
             if (latestOrientationData.alpha === null) {
                 compassDisplay.textContent = 'No Compass Data';
-                compassNeedle.style.transform = `rotate(0deg)`;
+                compassNeedle.style.transform = rotate(0deg);
                 strikeBtn.disabled = true;
                 return;
             } else {
@@ -467,10 +467,10 @@
 
             if (!isMeasuringStrike && strikeValue !== null) {
                 compassDisplay.textContent = formatCompassDirection(strikeValue);
-                compassNeedle.style.transform = `rotate(${-strikeValue}deg)`;
+                compassNeedle.style.transform = rotate(${-strikeValue}deg);
             } else {
                 compassDisplay.textContent = formatCompassDirection(latestOrientationData.alpha);
-                compassNeedle.style.transform = `rotate(${-latestOrientationData.alpha}deg)`;
+                compassNeedle.style.transform = rotate(${-latestOrientationData.alpha}deg);
             }
         }
 
@@ -481,7 +481,7 @@
             const maxOffset = 55;
             const normalizedGamma = (latestMotionData.gamma / 90) * maxOffset;
             const normalizedBeta = (latestMotionData.beta / 90) * maxOffset;
-            tiltBall.style.transform = `translate(${normalizedGamma}px, ${normalizedBeta}px)`;
+            tiltBall.style.transform = translate(${normalizedGamma}px, ${normalizedBeta}px);
 
             if (isMeasuringDip) {
                 const alpha = latestOrientationData.alpha;
@@ -503,17 +503,17 @@
                     tiltVisual.style.borderColor = '#4CAF50';
                     tiltGuide.style.backgroundColor = '#4CAF50';
                     tiltBall.style.backgroundColor = '#4CAF50';
-                    tiltDisplay.textContent = `Align Perpendicularly... ${tiltAngle}°`;
+                    tiltDisplay.textContent = Align Perpendicularly... ${tiltAngle}°;
                     dipValue = tiltAngle;
                 } else {
                     tiltVisual.style.borderColor = '#5a5a5a';
                     tiltGuide.style.backgroundColor = '#f0f0f0';
                     tiltBall.style.backgroundColor = '#008cff';
-                    tiltDisplay.textContent = `Tilt: ${tiltAngle}°`;
+                    tiltDisplay.textContent = Tilt: ${tiltAngle}°;
                 }
             } else {
                 const tiltAngle = Math.round(Math.sqrt(latestMotionData.gamma * latestMotionData.gamma + latestMotionData.beta * latestMotionData.beta));
-                tiltDisplay.textContent = `${Math.abs(tiltAngle)}°`;
+                tiltDisplay.textContent = ${Math.abs(tiltAngle)}°;
                 tiltVisual.style.borderColor = '#5a5a5a';
                 tiltGuide.style.backgroundColor = '#f0f0f0';
                 tiltBall.style.backgroundColor = '#008cff';
@@ -568,7 +568,7 @@
                 return;
             }
             const time = new Date().toLocaleString();
-            const coordinates = `${coordLatInput.value}, ${coordLonInput.value}`;
+            const coordinates = ${coordLatInput.value}, ${coordLonInput.value};
             measurements.push({
                 time,
                 coordinates,
