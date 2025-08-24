@@ -620,6 +620,12 @@
                 return;
             }
             
+            // Add a check to ensure currentBeta is a valid number before using it.
+            if (typeof currentBeta !== 'number' || isNaN(currentBeta)) {
+                showMessage('Device sensor data not available. Please try again.');
+                return;
+            }
+            
             // This is the "Tap to start measuring" for dip
             dipValue = `${Math.abs(Math.round(currentBeta))}°`;
             dipDirectionValue = Math.round(currentAlpha);
