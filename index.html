@@ -505,25 +505,27 @@
                 if (angleDifference > 180) {
                     angleDifference = 360 - angleDifference;
                 }
+                
+                // Set the tolerance for "perpendicular" alignment
+                const tolerance = 5;
 
                 let dipAngle;
-                if (angleDifference >= 85 && angleDifference <= 95) {
+                if (angleDifference >= (90 - tolerance) && angleDifference <= (90 + tolerance)) {
                     tiltVisual.style.borderColor = '#4CAF50';
                     tiltGuide.style.backgroundColor = '#4CAF50';
                     tiltBall.style.backgroundColor = '#4CAF50';
-                    showMessage('Phone is correctly aligned. Tap "Lock Dip" to save the value.');
-                    
                     dipAngle = Math.round(Math.abs(beta));
                     dipValue = dipAngle;
-                    dipDisplay.textContent = `${dipValue}°`;
+                    tiltDisplay.textContent = `Dip: ${dipValue}°`;
+                    showMessage('Phone is correctly aligned. Tap "Lock Dip" to save the value.');
 
                 } else {
                     tiltVisual.style.borderColor = '#5a5a5a';
                     tiltGuide.style.backgroundColor = '#f0f0f0';
                     tiltBall.style.backgroundColor = '#008cff';
-                    showMessage('Align phone perpendicular to strike to measure dip.');
-                    dipDisplay.textContent = '---';
                     dipValue = null;
+                    tiltDisplay.textContent = 'Align Perpendicularly';
+                    showMessage('Align phone perpendicular to strike to measure dip.');
                 }
             } else {
                 const tiltAngle = Math.round(Math.abs(latestOrientationData.beta));
@@ -572,10 +574,14 @@
             }
             
             if (isMeasuringDip) {
-                isMeasuringDip = false;
-                dipBtn.textContent = 'Re-measure Dip';
-                saveBtn.disabled = false;
-                showMessage('Dip measurement locked.');
+                if (dipValue !== null) {
+                    isMeasuringDip = false;
+                    dipBtn.textContent = 'Re-measure Dip';
+                    saveBtn.disabled = false;
+                    showMessage('Dip measurement locked.');
+                } else {
+                    showMessage('Please align phone perpendicular to strike before locking dip.');
+                }
             } else {
                 isMeasuringDip = true;
                 isMeasuringStrike = false;
