@@ -344,6 +344,11 @@
         </div>
         
         <div class="input-group">
+            <div class="label">Dip Direction</div>
+            <div id="dip-direction-display" class="value-display">---</div>
+        </div>
+
+        <div class="input-group">
             <div class="label">Coordinates</div>
             <div class="coordinates-group">
                 <input type="text" id="coord-lat" class="coordinate-input" placeholder="Latitude" value="N">
@@ -368,6 +373,7 @@
                     <th>Coordinates</th>
                     <th>Strike</th>
                     <th>Dip</th>
+                    <th>Dip Direction</th>
                 </tr>
             </thead>
             <tbody>
@@ -393,6 +399,7 @@
         // Global variables for sensor data and state
         let strikeValue = null;
         let dipValue = null;
+        let dipDirectionValue = null; // New variable for dip direction
         let waitingForPerpendicularAlignment = false;
         let hasSavedStrike = false;
         let measurements = [];
@@ -404,6 +411,7 @@
         // Cache DOM elements
         const strikeDisplay = document.getElementById('strike-display');
         const dipDisplay = document.getElementById('dip-display');
+        const dipDirectionDisplay = document.getElementById('dip-direction-display'); // New element
         const compassDisplay = document.getElementById('compass-display');
         const tiltDisplay = document.getElementById('tilt-display');
         const strikeBtn = document.getElementById('strike-btn');
@@ -590,8 +598,11 @@
             } else {
                 // This is the "Re-measure Strike" action
                 strikeValue = null;
+                dipValue = null;
+                dipDirectionValue = null;
                 strikeDisplay.textContent = '---';
                 dipDisplay.textContent = '---';
+                dipDirectionDisplay.textContent = '---';
                 waitingForPerpendicularAlignment = false;
                 hasSavedStrike = false;
                 dipBtn.disabled = true;
@@ -607,8 +618,10 @@
             }
             
             // This is the "Tap to start measuring" for dip
-            dipValue = `${Math.abs(Math.round(currentBeta))}° ${currentBeta > 0 ? 'S' : 'N'}`;
+            dipValue = `${Math.abs(Math.round(currentBeta))}°`;
+            dipDirectionValue = Math.round(currentAlpha);
             dipDisplay.textContent = dipValue;
+            dipDirectionDisplay.textContent = formatCompassDirection(dipDirectionValue);
             showMessage('Dip measurement complete!');
             dipBtn.disabled = true; // Disable after measurement
             waitingForPerpendicularAlignment = false; // Reset waiting state
@@ -618,8 +631,8 @@
         });
         
         saveBtn.addEventListener('click', () => {
-            if (strikeValue === null || dipValue === null) {
-                showMessage('Please complete both strike and dip measurements before saving.');
+            if (strikeValue === null || dipValue === null || dipDirectionValue === null) {
+                showMessage('Please complete all measurements before saving.');
                 return;
             }
             const time = new Date().toLocaleString();
@@ -628,7 +641,8 @@
                 time,
                 coordinates,
                 strike: formatCompassDirection(strikeValue),
-                dip: dipValue
+                dip: dipValue,
+                dipDirection: formatCompassDirection(dipDirectionValue)
             });
             showMessage('Measurements saved successfully!');
         });
@@ -638,8 +652,10 @@
             hasSavedStrike = false;
             strikeValue = null;
             dipValue = null;
+            dipDirectionValue = null;
             strikeDisplay.textContent = '---';
             dipDisplay.textContent = '---';
+            dipDirectionDisplay.textContent = '---';
             strikeBtn.textContent = 'Tap to start measuring';
             dipBtn.disabled = true;
             showMessage('Measurements have been reset.');
@@ -666,6 +682,7 @@
                     <td>${item.coordinates}</td>
                     <td>${item.strike}</td>
                     <td>${item.dip}</td>
+                    <td>${item.dipDirection}</td>
                 `;
                 measurementsTableBody.appendChild(row);
             });
