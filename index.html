@@ -47,7 +47,7 @@
             justify-content: center;
             font-size: 1.5rem;
             color: #888;
-            position: relative; /* Essential for positioning the visual elements */
+            position: relative;
             overflow: hidden;
         }
         
@@ -126,7 +126,7 @@
         }
 
         .start-btn {
-            background-color: #556B2F; /* Dark Olive Green */
+            background-color: #556B2F;
             color: #fff;
             box-shadow: 0 4px #3C4B22;
         }
@@ -165,7 +165,6 @@
             display: block;
         }
 
-        /* Chart Page Styling */
         .chart-page {
             max-width: 800px;
         }
@@ -192,7 +191,6 @@
             background-color: #2a2a2a;
         }
 
-        /* New styles for visual compass and tilt */
         #compass-visual {
             position: absolute;
             top: 50%;
@@ -225,7 +223,7 @@
             height: 40%;
             border-left: 5px solid transparent;
             border-right: 5px solid transparent;
-            border-bottom: 20px solid #f00; /* Red needle tip */
+            border-bottom: 20px solid #f00;
         }
         
         .compass-marker {
@@ -271,7 +269,7 @@
             position: absolute;
             width: 20px;
             height: 20px;
-            background-color: #008cff; /* Blue ball */
+            background-color: #008cff;
             border-radius: 50%;
             transform: translate(-50%, -50%);
             transition: transform 0.1s ease-out;
@@ -292,7 +290,6 @@
     </style>
 </head>
 <body>
-    <!-- Main App Page -->
     <div id="main-app" class="page active container">
         <div class="header">Geological Compass</div>
         <div class="compass-tilt-grid">
@@ -328,13 +325,13 @@
         <div class="input-group">
             <div class="label">Strike</div>
             <div id="strike-display" class="value-display">---</div>
-            <button id="strike-btn" class="btn start-btn">Tap to start measuring</button>
+            <button id="strike-btn" class="btn start-btn">Start measuring strike</button>
         </div>
 
         <div class="input-group">
             <div class="label">Dip</div>
             <div id="dip-display" class="value-display">---</div>
-            <button id="dip-btn" class="btn start-btn" disabled>Tap to start measuring</button>
+            <button id="dip-btn" class="btn start-btn" disabled>Start measuring dip</button>
         </div>
         
         <div class="input-group">
@@ -347,12 +344,11 @@
         
         <div class="btn-group">
             <button id="restart-btn" class="btn">Re-Start measurements</button>
-            <button id="save-btn" class="btn">Save Measurements</button>
+            <button id="save-btn" class="btn" disabled>Save Measurements</button>
             <button id="show-chart-btn" class="btn">Show Chart</button>
         </div>
     </div>
 
-    <!-- Chart Page -->
     <div id="chart-page" class="page chart-page container">
         <div class="header">Saved Measurements</div>
         <table id="measurements-table">
@@ -365,7 +361,6 @@
                 </tr>
             </thead>
             <tbody>
-                <!-- Data will be inserted here -->
             </tbody>
         </table>
         <div class="btn-group mt-5">
@@ -375,25 +370,21 @@
         </div>
     </div>
 
-    <!-- Notification/Message Box -->
     <div id="message-box" class="message-box"></div>
 
-    <!-- jsPDF library for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- html2canvas for JPG export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <script>
-        // Global variables for sensor data and state
         let strikeValue = null;
         let dipValue = null;
         let isMeasuringStrike = false;
         let isMeasuringDip = false;
-        let hasSavedStrike = false;
         let measurements = [];
         let permissionsRequested = false;
+        let latestOrientationData = { alpha: 0, beta: 0, gamma: 0 };
+        let latestMotionData = { beta: 0, gamma: 0 };
 
-        // Cache DOM elements
         const strikeDisplay = document.getElementById('strike-display');
         const dipDisplay = document.getElementById('dip-display');
         const compassDisplay = document.getElementById('compass-display');
@@ -411,15 +402,11 @@
         const measurementsTableBody = document.querySelector('#measurements-table tbody');
         const coordLatInput = document.getElementById('coord-lat');
         const coordLonInput = document.getElementById('coord-lon');
-        
-        // New visual elements
         const compassNeedle = document.querySelector('.compass-needle');
-        const compassVisual = document.getElementById('compass-visual');
         const tiltBall = document.getElementById('tilt-ball');
         const tiltGuide = document.getElementById('tilt-guide');
         const tiltVisual = document.getElementById('tilt-visual');
 
-        // Function to show a temporary notification message
         function showMessage(message) {
             const msgBox = document.getElementById('message-box');
             msgBox.textContent = message;
@@ -429,40 +416,18 @@
             }, 3000);
         }
 
-        // Helper function to format compass direction
         function formatCompassDirection(degrees) {
             if (degrees < 0) degrees += 360;
             const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
             const index = Math.round(degrees / 22.5);
             const direction = directions[index % 16];
-            
-            let formattedValue = '';
-            if (degrees > 337.5 || degrees <= 22.5) {
-                formattedValue = `N`;
-            } else if (degrees > 22.5 && degrees <= 67.5) {
-                formattedValue = `N${Math.round(degrees)}E`;
-            } else if (degrees > 67.5 && degrees <= 112.5) {
-                formattedValue = `E`;
-            } else if (degrees > 112.5 && degrees <= 157.5) {
-                formattedValue = `S${Math.round(180 - degrees)}E`;
-            } else if (degrees > 157.5 && degrees <= 202.5) {
-                formattedValue = `S`;
-            } else if (degrees > 202.5 && degrees <= 247.5) {
-                formattedValue = `S${Math.round(degrees - 180)}W`;
-            } else if (degrees > 247.5 && degrees <= 292.5) {
-                formattedValue = `W`;
-            } else if (degrees > 292.5 && degrees <= 337.5) {
-                formattedValue = `N${Math.round(360 - degrees)}W`;
-            }
-            return formattedValue;
+            return `${direction} (${Math.round(degrees)}°)`;
         }
 
-        // Check for device orientation and motion support on mobile
         function hasSensorSupport() {
             return (window.DeviceOrientationEvent && 'ondeviceorientation' in window) || (window.DeviceMotionEvent && 'ondevicemotion' in window);
         }
 
-        // Request permissions for iOS 13+
         async function requestSensorPermissions() {
             if (typeof DeviceOrientationEvent.requestPermission === 'function' && !permissionsRequested) {
                 try {
@@ -483,79 +448,71 @@
             }
         }
         
-        // Start device sensor listeners
         function startListeners() {
             window.addEventListener('deviceorientation', handleOrientation);
             window.addEventListener('devicemotion', handleMotion);
         }
 
-        // Handle device orientation events for compass
         function handleOrientation(event) {
-            const alpha = event.webkitCompassHeading || event.alpha; // Use webkitCompassHeading for iOS
-            if (alpha === null) {
-                // Fallback for devices without a calibrated compass
-                const absoluteAlpha = event.absolute ? event.alpha : null;
-                if (absoluteAlpha !== null) {
-                    const formattedDirection = formatCompassDirection(absoluteAlpha);
-                    compassDisplay.textContent = `${formattedDirection} (${Math.round(absoluteAlpha)}°)`;
-                    compassNeedle.style.transform = `rotate(${-absoluteAlpha}deg)`;
-                } else {
-                    compassDisplay.textContent = 'No Compass Data';
-                    compassNeedle.style.transform = `rotate(0deg)`;
-                }
+            latestOrientationData.alpha = event.webkitCompassHeading || event.alpha;
+            
+            if (latestOrientationData.alpha === null) {
+                compassDisplay.textContent = 'No Compass Data';
+                compassNeedle.style.transform = `rotate(0deg)`;
+                strikeBtn.disabled = true;
+                return;
             } else {
-                const formattedDirection = formatCompassDirection(alpha);
-                compassDisplay.textContent = `${formattedDirection} (${Math.round(alpha)}°)`;
-                // Rotate the compass needle visual
-                if (isMeasuringStrike || !hasSavedStrike) {
-                     // During strike measurement or before a strike is saved, the needle moves freely
-                     compassNeedle.style.transform = `rotate(${-alpha}deg)`;
-                } else {
-                    // After strike is saved, the needle is locked
-                    compassNeedle.style.transform = `rotate(${-strikeValue}deg)`;
-                }
+                strikeBtn.disabled = false;
+            }
+
+            if (!isMeasuringStrike && strikeValue !== null) {
+                compassDisplay.textContent = formatCompassDirection(strikeValue);
+                compassNeedle.style.transform = `rotate(${-strikeValue}deg)`;
+            } else {
+                compassDisplay.textContent = formatCompassDirection(latestOrientationData.alpha);
+                compassNeedle.style.transform = `rotate(${-latestOrientationData.alpha}deg)`;
             }
         }
 
-        // Handle device motion events for tilt (dip)
         function handleMotion(event) {
-            const beta = event.beta;
-            const gamma = event.gamma;
-            
-            // Update visual ball position based on device tilt
-            const maxOffset = 55; // Max pixel offset for the ball within the box
-            const normalizedGamma = (gamma / 90) * maxOffset;
-            const normalizedBeta = (beta / 90) * maxOffset;
+            latestMotionData.beta = event.beta;
+            latestMotionData.gamma = event.gamma;
+
+            const maxOffset = 55;
+            const normalizedGamma = (latestMotionData.gamma / 90) * maxOffset;
+            const normalizedBeta = (latestMotionData.beta / 90) * maxOffset;
             tiltBall.style.transform = `translate(${normalizedGamma}px, ${normalizedBeta}px)`;
 
             if (isMeasuringDip) {
-                // Check if the device is perpendicular to the strike direction
-                const alpha = event.webkitCompassHeading || event.alpha;
-                
-                // Calculate difference in heading
+                const alpha = latestOrientationData.alpha;
+                if (alpha === null) {
+                    tiltDisplay.textContent = 'No Compass Data';
+                    return;
+                }
+
                 const strikeNorm = strikeValue;
                 const alphaNorm = alpha;
-                
-                // Calculate the shortest angle between the two headings
                 let angleDifference = Math.abs(strikeNorm - alphaNorm);
                 if (angleDifference > 180) {
                     angleDifference = 360 - angleDifference;
                 }
+                
+                const tiltAngle = Math.round(Math.sqrt(latestMotionData.gamma * latestMotionData.gamma + latestMotionData.beta * latestMotionData.beta));
 
                 if (angleDifference >= 85 && angleDifference <= 95) {
-                    tiltVisual.style.borderColor = '#4CAF50'; // Green border
-                    tiltGuide.style.backgroundColor = '#4CAF50'; // Green guide
-                    tiltBall.style.backgroundColor = '#4CAF50'; // Green ball
-                    tiltDisplay.textContent = 'Correct Alignment!';
+                    tiltVisual.style.borderColor = '#4CAF50';
+                    tiltGuide.style.backgroundColor = '#4CAF50';
+                    tiltBall.style.backgroundColor = '#4CAF50';
+                    tiltDisplay.textContent = `Align Perpendicularly... ${tiltAngle}°`;
+                    dipValue = tiltAngle;
                 } else {
-                    tiltVisual.style.borderColor = '#5a5a5a'; // Default border color
-                    tiltGuide.style.backgroundColor = '#f0f0f0'; // Default guide color
-                    tiltBall.style.backgroundColor = '#008cff'; // Default ball color
-                    tiltDisplay.textContent = 'Align Perpendicularly';
+                    tiltVisual.style.borderColor = '#5a5a5a';
+                    tiltGuide.style.backgroundColor = '#f0f0f0';
+                    tiltBall.style.backgroundColor = '#008cff';
+                    tiltDisplay.textContent = `Tilt: ${tiltAngle}°`;
                 }
             } else {
-                // When not measuring dip, show live tilt data
-                const tiltAngle = Math.round(Math.sqrt(gamma * gamma + beta * beta));
+                const tiltAngle = Math.round(Math.sqrt(latestMotionData.gamma * latestMotionData.gamma + latestMotionData.beta * latestMotionData.beta));
                 tiltDisplay.textContent = `${Math.abs(tiltAngle)}°`;
                 tiltVisual.style.borderColor = '#5a5a5a';
                 tiltGuide.style.backgroundColor = '#f0f0f0';
@@ -563,7 +520,6 @@
             }
         }
         
-        // Event listeners for buttons
         strikeBtn.addEventListener('click', () => {
             if (!hasSensorSupport()) {
                 showMessage('Your device does not support the necessary sensors.');
@@ -572,44 +528,42 @@
             requestSensorPermissions();
 
             if (isMeasuringStrike) {
-                // This is the "Lock Strike" action
-                const orientationEvent = new window.DeviceOrientationEvent('deviceorientation');
-                const gamma = orientationEvent.gamma;
-                if (Math.abs(gamma) < 10) { // Check if device is approximately horizontal
-                    const alpha = orientationEvent.webkitCompassHeading || orientationEvent.alpha;
-                    strikeValue = Math.round(alpha);
+                if (Math.abs(latestMotionData.beta) < 10 && Math.abs(latestMotionData.gamma) < 10) {
+                    strikeValue = Math.round(latestOrientationData.alpha);
                     strikeDisplay.textContent = formatCompassDirection(strikeValue);
                     isMeasuringStrike = false;
-                    hasSavedStrike = true;
                     dipBtn.disabled = false;
                     strikeBtn.textContent = 'Re-measure Strike';
-                    showMessage('Strike measurement complete! Compass is now locked.');
+                    saveBtn.disabled = false;
+                    showMessage('Strike measurement complete! The compass is now locked.');
                 } else {
                     showMessage('Keep your device horizontal to lock the strike.');
                 }
             } else {
-                // This is the initial "Tap to start measuring" action
                 strikeValue = null;
                 strikeDisplay.textContent = '---';
+                dipValue = null;
+                dipDisplay.textContent = '---';
                 isMeasuringStrike = true;
                 isMeasuringDip = false;
-                hasSavedStrike = false;
                 dipBtn.disabled = true;
-                strikeBtn.textContent = 'Align Device Horizontally';
+                saveBtn.disabled = true;
+                strikeBtn.textContent = 'Lock Strike';
                 showMessage('Measuring Strike... Align the red needle with the strike direction.');
             }
         });
 
         dipBtn.addEventListener('click', () => {
-            if (!hasSavedStrike) {
+            if (strikeValue === null) {
                 showMessage('Please measure the strike first.');
                 return;
             }
-            dipValue = null;
-            dipDisplay.textContent = '---';
             isMeasuringDip = true;
             isMeasuringStrike = false;
-            showMessage('Measuring Dip... Turn device perpendicular to strike.');
+            dipValue = null;
+            dipDisplay.textContent = '---';
+            dipBtn.textContent = 'Lock Dip';
+            showMessage('Measuring Dip... Turn device perpendicular to strike and find the maximum tilt.');
         });
         
         saveBtn.addEventListener('click', () => {
@@ -626,21 +580,26 @@
                 dip: dipValue
             });
             showMessage('Measurements saved successfully!');
+            saveBtn.disabled = true;
+            dipBtn.disabled = true;
+            strikeBtn.textContent = 'Start measuring strike';
+            strikeValue = null;
+            dipValue = null;
+            strikeDisplay.textContent = '---';
+            dipDisplay.textContent = '---';
         });
         
         restartBtn.addEventListener('click', () => {
             isMeasuringStrike = false;
             isMeasuringDip = false;
-            hasSavedStrike = false;
             strikeValue = null;
             dipValue = null;
             strikeDisplay.textContent = '---';
             dipDisplay.textContent = '---';
-            strikeBtn.textContent = 'Tap to start measuring';
+            strikeBtn.textContent = 'Start measuring strike';
             dipBtn.disabled = true;
+            saveBtn.disabled = true;
             showMessage('Measurements have been reset.');
-            // Restart the compass needle movement
-            startListeners();
         });
 
         showChartBtn.addEventListener('click', () => {
@@ -654,22 +613,20 @@
             mainAppPage.classList.add('active');
         });
 
-        // Function to update the chart table with saved data
         function updateChartTable() {
-            measurementsTableBody.innerHTML = ''; // Clear previous data
+            measurementsTableBody.innerHTML = '';
             measurements.forEach(item => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${item.time}</td>
                     <td>${item.coordinates}</td>
                     <td>${item.strike}</td>
-                    <td>${item.dip}</td>
+                    <td>${item.dip}°</td>
                 `;
                 measurementsTableBody.appendChild(row);
             });
         }
         
-        // Function to save chart as PDF
         savePdfBtn.addEventListener('click', async () => {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
@@ -685,7 +642,6 @@
             });
         });
         
-        // Function to save chart as JPG
         saveJpgBtn.addEventListener('click', () => {
             const table = document.getElementById('measurements-table');
             html2canvas(table).then(canvas => {
@@ -699,7 +655,6 @@
             });
         });
         
-        // Initial setup to listen for sensor data
         startListeners();
     </script>
 </body>
