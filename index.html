@@ -539,6 +539,9 @@
             currentBeta = event.beta;
             currentGamma = event.gamma;
             
+            // Get the live tilt angle value
+            const tiltAngle = Math.round(Math.sqrt(currentGamma * currentGamma + currentBeta * currentBeta));
+
             // Only update the tilt visual and check for perpendicular alignment when we are in the dip measurement state.
             if (waitingForPerpendicularAlignment) {
                 const maxOffset = 55; // Max pixel offset for the ball within the box
@@ -555,23 +558,23 @@
                 if (angleDifference > 180) {
                     angleDifference = 360 - angleDifference;
                 }
-
+                
+                // Update the tilt display with both the live angle and the alignment status
                 if (angleDifference >= 87 && angleDifference <= 93) {
                     tiltVisual.style.borderColor = '#4CAF50'; // Green border
                     tiltGuide.style.backgroundColor = '#4CAF50'; // Green guide
                     tiltBall.style.backgroundColor = '#4CAF50'; // Green ball
-                    tiltDisplay.textContent = 'Correct Alignment!';
+                    tiltDisplay.textContent = `${Math.abs(tiltAngle)}° - Aligned!`;
                     dipBtn.disabled = false;
                 } else {
                     tiltVisual.style.borderColor = '#5a5a5a'; // Default border color
                     tiltGuide.style.backgroundColor = '#f0f0f0'; // Default guide color
                     tiltBall.style.backgroundColor = '#008cff'; // Default ball color
-                    tiltDisplay.textContent = 'Align Perpendicularly';
+                    tiltDisplay.textContent = `${Math.abs(tiltAngle)}° - Align Perpendicularly`;
                     dipBtn.disabled = true;
                 }
             } else {
-                // When not waiting for alignment, hide tilt details but show general tilt value
-                const tiltAngle = Math.round(Math.sqrt(currentGamma * currentGamma + currentBeta * currentBeta));
+                // When not waiting for alignment, show only the general tilt value
                 tiltDisplay.textContent = `${Math.abs(tiltAngle)}°`;
                 tiltVisual.style.borderColor = '#5a5a5a';
                 tiltGuide.style.backgroundColor = '#f0f0f0';
