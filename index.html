@@ -106,35 +106,6 @@
             text-align: center;
             width: 100%;
         }
-        
-        /* New styling for a single button */
-        .coordinates-btn-group {
-            display: flex;
-            justify-content: center;
-            margin-top: 10px;
-        }
-        
-        .coordinates-btn {
-            background-color: #556B2F;
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 10px;
-            border: none;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.2s;
-            box-shadow: 0 4px #3C4B22;
-        }
-
-        .coordinates-btn:hover {
-            background-color: #6a823d;
-        }
-
-        .coordinates-btn:active {
-            transform: translateY(2px);
-            box-shadow: 0 2px #3C4B22;
-        }
 
         .btn-group {
             display: flex;
@@ -390,14 +361,11 @@
             <button id="dip-direction-btn" class="btn start-btn" disabled>Start measuring dip direction</button>
         </div>
 
-        <div class="coordinates-group">
-            <div class="label">Coordinates (WGS 84)</div>
+        <div class="input-group" style="flex-direction: column; align-items: flex-start;">
+            <div class="label" style="margin-bottom: 5px;">Coordinates (WGS 84)</div>
             <div class="coordinates-row">
                 <input type="text" id="coord-lat" class="coordinate-input" placeholder="N">
                 <input type="text" id="coord-lon" class="coordinate-input" placeholder="E">
-            </div>
-            <div class="coordinates-btn-group">
-                <button id="get-location-btn" class="coordinates-btn">Get Coordinates</button>
             </div>
         </div>
 
@@ -463,7 +431,6 @@
         const measurementsTableBody = document.querySelector('#measurements-table tbody');
         const coordLatInput = document.getElementById('coord-lat');
         const coordLonInput = document.getElementById('coord-lon');
-        const getLocationBtn = document.getElementById('get-location-btn'); // Renamed button
         const compassNeedle = document.querySelector('.compass-needle');
         const tiltBall = document.getElementById('tilt-ball');
         const tiltVisual = document.getElementById('tilt-visual');
@@ -684,23 +651,29 @@
                 showMessage('Tap the button again to lock the dip direction value.');
             }
         });
-        
-        // Event listener for the new "Get Coordinates" button
-        getLocationBtn.addEventListener('click', () => {
+
+        // Function to automatically get location and fill the inputs
+        function getAutomaticLocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(position => {
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
-                    coordLatInput.value = `${lat.toFixed(6)}° N`;
-                    coordLonInput.value = `${lon.toFixed(6)}° E`;
-                    showMessage('Coordinates captured automatically!');
+                    // Check if latitude is positive or negative for N/S, and longitude for E/W
+                    const latHemisphere = lat >= 0 ? 'N' : 'S';
+                    const lonHemisphere = lon >= 0 ? 'E' : 'W';
+                    coordLatInput.value = `${Math.abs(lat).toFixed(6)}° ${latHemisphere}`;
+                    coordLonInput.value = `${Math.abs(lon).toFixed(6)}° ${lonHemisphere}`;
+                    showMessage('Location data filled automatically.');
                 }, error => {
-                    showMessage('Geolocation error: ' + error.message, 'error');
+                    showMessage('Geolocation error: ' + error.message + '. Please allow location access.', 'error');
                 });
             } else {
                 showMessage('Geolocation is not supported by this browser.', 'error');
             }
-        });
+        }
+
+        // Call the function when the page loads
+        document.addEventListener('DOMContentLoaded', getAutomaticLocation);
 
         // Corrected save function
         saveBtn.addEventListener('click', () => {
@@ -738,8 +711,7 @@
             dipBtn.disabled = true;
             dipDirectionBtn.disabled = true;
             saveBtn.disabled = true;
-            coordLatInput.value = '';
-            coordLonInput.value = '';
+            // The location inputs will automatically refresh on page reload
         });
         
         restartBtn.addEventListener('click', () => {
@@ -758,6 +730,7 @@
             dipBtn.disabled = true;
             dipDirectionBtn.disabled = true;
             saveBtn.disabled = true;
+            // Do not clear location inputs, as they will be automatically refilled
             showMessage('Measurements have been reset.');
         });
 
