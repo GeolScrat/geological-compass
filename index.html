@@ -78,17 +78,13 @@
             justify-content: space-between;
             margin-bottom: 15px;
         }
-        
-        /* New styling for coordinate buttons and inputs */
-        .coordinates-row {
+
+        .coordinates-group {
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 10px;
             margin-bottom: 20px;
-        }
-        
-        .coordinates-row input {
-            flex-grow: 1;
         }
 
         .coordinate-input {
@@ -97,6 +93,7 @@
             padding: 10px;
             border-radius: 8px;
             text-align: center;
+            width: 80px;
         }
         
         .btn-group {
@@ -290,6 +287,17 @@
             padding: 5px 10px;
             border-radius: 5px;
         }
+        
+        .coordinates-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .coordinates-row input {
+            flex-grow: 1;
+        }
     </style>
 </head>
 <body>
@@ -384,4 +392,391 @@
         </div>
     </div>
 
-    <div id="message-
+    <div id="message-box" class="message-box"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <script>
+        let strikeValue = null;
+        let dipValue = null;
+        let dipDirectionValue = null;
+        let isMeasuringStrike = false;
+        let isMeasuringDip = false;
+        let isMeasuringDipDirection = false;
+        let measurements = [];
+        let permissionsRequested = false;
+        let latestOrientationData = { alpha: 0, beta: 0, gamma: 0 };
+        let latestMotionData = { beta: 0, gamma: 0 };
+
+        const strikeDisplay = document.getElementById('strike-display');
+        const dipDisplay = document.getElementById('dip-display');
+        const dipDirectionDisplay = document.getElementById('dip-direction-display');
+        const compassDisplay = document.getElementById('compass-display');
+        const tiltDisplay = document.getElementById('tilt-display');
+        const strikeBtn = document.getElementById('strike-btn');
+        const dipBtn = document.getElementById('dip-btn');
+        const dipDirectionBtn = document.getElementById('dip-direction-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const showChartBtn = document.getElementById('show-chart-btn');
+        const savePdfBtn = document.getElementById('save-pdf-btn');
+        const saveJpgBtn = document.getElementById('save-jpg-btn');
+        const backToAppBtn = document.getElementById('back-to-app-btn');
+        const mainAppPage = document.getElementById('main-app');
+        const chartPage = document.getElementById('chart-page');
+        const measurementsTableBody = document.querySelector('#measurements-table tbody');
+        const coordLatInput = document.getElementById('coord-lat');
+        const coordLonInput = document.getElementById('coord-lon');
+        const getLatBtn = document.getElementById('get-lat-btn');
+        const getLonBtn = document.getElementById('get-lon-btn');
+        const compassNeedle = document.querySelector('.compass-needle');
+        const tiltBall = document.getElementById('tilt-ball');
+        const tiltGuide = document.getElementById('tilt-guide');
+        const tiltVisual = document.getElementById('tilt-visual');
+
+        function showMessage(message) {
+            const msgBox = document.getElementById('message-box');
+            msgBox.textContent = message;
+            msgBox.classList.add('show');
+            setTimeout(() => {
+                msgBox.classList.remove('show');
+            }, 3000);
+        }
+
+        function formatCompassDirection(degrees) {
+            if (degrees < 0) degrees += 360;
+            const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+            const index = Math.round(degrees / 22.5);
+            const direction = directions[index % 16];
+            return `${direction} (${Math.round(degrees)}°)`;
+        }
+
+        function hasSensorSupport() {
+            return (window.DeviceOrientationEvent && 'ondeviceorientation' in window) || (window.DeviceMotionEvent && 'ondevicemotion' in window);
+        }
+
+        async function requestSensorPermissions() {
+            if (typeof DeviceOrientationEvent.requestPermission === 'function' && !permissionsRequested) {
+                try {
+                    const permissionState = await DeviceOrientationEvent.requestPermission();
+                    if (permissionState === 'granted') {
+                        startListeners();
+                        permissionsRequested = true;
+                        return true;
+                    } else {
+                        showMessage('Permission to access sensors was denied.');
+                        return false;
+                    }
+                } catch (error) {
+                    console.error('Permission request failed:', error);
+                    showMessage('Permission request for device sensors failed. Please check your browser settings.');
+                    return false;
+                }
+            } else {
+                startListeners();
+                permissionsRequested = true;
+                return true;
+            }
+        }
+
+        function startListeners() {
+            if (!permissionsRequested) {
+                window.addEventListener('deviceorientation', handleOrientation);
+                window.addEventListener('devicemotion', handleMotion);
+                permissionsRequested = true;
+            }
+        }
+
+        function handleOrientation(event) {
+            latestOrientationData.alpha = event.webkitCompassHeading || event.alpha;
+            latestOrientationData.beta = event.beta;
+            latestOrientationData.gamma = event.gamma;
+
+            if (latestOrientationData.alpha === null) {
+                compassDisplay.textContent = 'No Compass Data';
+                compassNeedle.style.transform = `rotate(0deg)`;
+                strikeBtn.disabled = true;
+                return;
+            } else {
+                strikeBtn.disabled = false;
+            }
+
+            if (isMeasuringStrike || isMeasuringDipDirection) {
+                compassDisplay.textContent = formatCompassDirection(latestOrientationData.alpha);
+                compassNeedle.style.transform = `rotate(${-latestOrientationData.alpha}deg)`;
+            } else if (strikeValue !== null) {
+                compassDisplay.textContent = formatCompassDirection(strikeValue);
+                compassNeedle.style.transform = `rotate(${-strikeValue}deg)`;
+            } else {
+                 compassDisplay.textContent = 'Compass';
+                 compassNeedle.style.transform = `rotate(0deg)`;
+            }
+        }
+
+        function handleMotion(event) {
+            const beta = latestOrientationData.beta;
+            const gamma = latestOrientationData.gamma;
+            
+            const maxOffset = 55;
+            const normalizedGamma = (gamma / 90) * maxOffset;
+            const normalizedBeta = (beta / 90) * maxOffset;
+            tiltBall.style.transform = `translate(${normalizedGamma}px, ${normalizedBeta}px)`;
+
+            if (isMeasuringDip) {
+                const alpha = latestOrientationData.alpha;
+                if (alpha === null) {
+                    tiltDisplay.textContent = 'No Compass Data';
+                    return;
+                }
+
+                const strikeAngle = strikeValue;
+                const currentHeading = alpha;
+                let angleDifference = Math.abs(strikeAngle - currentHeading);
+                if (angleDifference > 180) {
+                    angleDifference = 360 - angleDifference;
+                }
+                
+                const tolerance = 5;
+
+                let dipAngle;
+                if (angleDifference >= (90 - tolerance) && angleDifference <= (90 + tolerance)) {
+                    tiltVisual.style.borderColor = '#4CAF50';
+                    tiltGuide.style.backgroundColor = '#4CAF50';
+                    tiltBall.style.backgroundColor = '#4CAF50';
+                    dipAngle = Math.round(Math.abs(beta));
+                    dipValue = dipAngle;
+                    tiltDisplay.textContent = `Dip: ${dipValue}°`;
+                    showMessage('Phone is correctly aligned. Tap "Lock Dip" to save the value.');
+
+                } else {
+                    tiltVisual.style.borderColor = '#5a5a5a';
+                    tiltGuide.style.backgroundColor = '#f0f0f0';
+                    tiltBall.style.backgroundColor = '#008cff';
+                    dipValue = null;
+                    tiltDisplay.textContent = 'Align Perpendicularly';
+                    showMessage('Align phone perpendicular to strike to measure dip.');
+                }
+            } else {
+                const tiltAngle = Math.round(Math.abs(latestOrientationData.beta));
+                tiltDisplay.textContent = `${tiltAngle}°`;
+                tiltVisual.style.borderColor = '#5a5a5a';
+                tiltGuide.style.backgroundColor = '#f0f0f0';
+                tiltBall.style.backgroundColor = '#008cff';
+            }
+        }
+
+        strikeBtn.addEventListener('click', async () => {
+            if (!hasSensorSupport()) {
+                showMessage('Your device does not support the necessary sensors.');
+                return;
+            }
+
+            const hasPermission = await requestSensorPermissions();
+            if (!hasPermission) return;
+
+            if (isMeasuringStrike) {
+                strikeValue = Math.round(latestOrientationData.alpha);
+                strikeDisplay.textContent = formatCompassDirection(strikeValue);
+                isMeasuringStrike = false;
+                dipBtn.disabled = false;
+                strikeBtn.textContent = 'Re-measure Strike';
+                showMessage('Strike measurement complete! The compass is now locked.');
+            } else {
+                strikeValue = null;
+                strikeDisplay.textContent = '---';
+                dipValue = null;
+                dipDisplay.textContent = '---';
+                dipDirectionValue = null;
+                dipDirectionDisplay.textContent = '---';
+                isMeasuringStrike = true;
+                isMeasuringDip = false;
+                isMeasuringDipDirection = false;
+                dipBtn.disabled = true;
+                dipDirectionBtn.disabled = true;
+                saveBtn.disabled = true;
+                strikeBtn.textContent = 'Lock Strike';
+                showMessage('Tap the button again to lock the strike value.');
+            }
+        });
+
+        dipBtn.addEventListener('click', () => {
+            if (strikeValue === null) {
+                showMessage('Please measure the strike first.');
+                return;
+            }
+            
+            if (isMeasuringDip) {
+                if (dipValue !== null) {
+                    isMeasuringDip = false;
+                    dipBtn.textContent = 'Re-measure Dip';
+                    dipDirectionBtn.disabled = false;
+                    showMessage('Dip measurement locked.');
+                } else {
+                    showMessage('Please align phone perpendicular to strike before locking dip.');
+                }
+            } else {
+                isMeasuringDip = true;
+                isMeasuringStrike = false;
+                isMeasuringDipDirection = false;
+                dipValue = null;
+                dipDisplay.textContent = '---';
+                dipDirectionBtn.disabled = true;
+                saveBtn.disabled = true;
+                dipBtn.textContent = 'Lock Dip';
+                showMessage('Measuring Dip... Turn device perpendicular to strike and tap the button to lock.');
+            }
+        });
+        
+        dipDirectionBtn.addEventListener('click', () => {
+            if (isMeasuringDipDirection) {
+                dipDirectionValue = Math.round(latestOrientationData.alpha);
+                dipDirectionDisplay.textContent = formatCompassDirection(dipDirectionValue);
+                isMeasuringDipDirection = false;
+                saveBtn.disabled = false;
+                dipDirectionBtn.textContent = 'Re-measure Dip Direction';
+                showMessage('Dip Direction measurement complete! Tap save to store your data.');
+            } else {
+                dipDirectionValue = null;
+                dipDirectionDisplay.textContent = '---';
+                isMeasuringDipDirection = true;
+                isMeasuringStrike = false;
+                isMeasuringDip = false;
+                saveBtn.disabled = true;
+                dipDirectionBtn.textContent = 'Lock Dip Direction';
+                showMessage('Tap the button again to lock the dip direction value.');
+            }
+        });
+
+        getLatBtn.addEventListener('click', () => {
+            getLocation('latitude');
+        });
+
+        getLonBtn.addEventListener('click', () => {
+            getLocation('longitude');
+        });
+        
+        function getLocation(type) {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    if (type === 'latitude') {
+                        coordLatInput.value = `${lat.toFixed(6)}° N`;
+                        showMessage('Latitude captured.');
+                    } else if (type === 'longitude') {
+                        coordLonInput.value = `${lon.toFixed(6)}° E`;
+                        showMessage('Longitude captured.');
+                    }
+                }, error => {
+                    showMessage('Geolocation error: ' + error.message, 'error');
+                });
+            } else {
+                showMessage('Geolocation is not supported by this browser.', 'error');
+            }
+        }
+
+        saveBtn.addEventListener('click', () => {
+            if (strikeValue === null || dipValue === null || dipDirectionValue === null) {
+                showMessage('Please complete all measurements before saving.');
+                return;
+            }
+            const time = new Date().toLocaleString();
+            const coordinates = `${coordLatInput.value}, ${coordLonInput.value}`;
+            measurements.push({
+                time,
+                coordinates,
+                strike: formatCompassDirection(strikeValue),
+                dip: dipValue,
+                dipDirection: formatCompassDirection(dipDirectionValue)
+            });
+            showMessage('Measurements saved successfully!');
+            saveBtn.disabled = true;
+            dipBtn.disabled = true;
+            dipDirectionBtn.disabled = true;
+            strikeBtn.textContent = 'Start measuring strike';
+            strikeValue = null;
+            dipValue = null;
+            dipDirectionValue = null;
+            strikeDisplay.textContent = '---';
+            dipDisplay.textContent = '---';
+            dipDirectionDisplay.textContent = '---';
+            dipBtn.textContent = 'Start measuring dip';
+            dipDirectionBtn.textContent = 'Start measuring dip direction';
+        });
+        
+        restartBtn.addEventListener('click', () => {
+            isMeasuringStrike = false;
+            isMeasuringDip = false;
+            isMeasuringDipDirection = false;
+            strikeValue = null;
+            dipValue = null;
+            dipDirectionValue = null;
+            strikeDisplay.textContent = '---';
+            dipDisplay.textContent = '---';
+            dipDirectionDisplay.textContent = '---';
+            strikeBtn.textContent = 'Start measuring strike';
+            dipBtn.textContent = 'Start measuring dip';
+            dipDirectionBtn.textContent = 'Start measuring dip direction';
+            dipBtn.disabled = true;
+            dipDirectionBtn.disabled = true;
+            saveBtn.disabled = true;
+            showMessage('Measurements have been reset.');
+        });
+
+        showChartBtn.addEventListener('click', () => {
+            mainAppPage.classList.remove('active');
+            chartPage.classList.add('active');
+            updateChartTable();
+        });
+
+        backToAppBtn.addEventListener('click', () => {
+            chartPage.classList.remove('active');
+            mainAppPage.classList.add('active');
+        });
+
+        function updateChartTable() {
+            measurementsTableBody.innerHTML = '';
+            measurements.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.time}</td>
+                    <td>${item.coordinates}</td>
+                    <td>${item.strike}</td>
+                    <td>${item.dip}°</td>
+                    <td>${item.dipDirection}</td>
+                `;
+                measurementsTableBody.appendChild(row);
+            });
+        }
+        
+        savePdfBtn.addEventListener('click', async () => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text("Geological Compass Measurements", 10, 10);
+            
+            const table = document.getElementById('measurements-table');
+            doc.html(table, {
+                callback: function (doc) {
+                    doc.save('geological-measurements.pdf');
+                },
+                x: 10,
+                y: 20
+            });
+        });
+        
+        saveJpgBtn.addEventListener('click', () => {
+            const table = document.getElementById('measurements-table');
+            html2canvas(table).then(canvas => {
+                const imgData = canvas.toDataURL('image/jpeg');
+                const link = document.createElement('a');
+                link.href = imgData;
+                link.download = 'geological-measurements.jpg';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+        });
+    </script>
+</body>
+</html>
